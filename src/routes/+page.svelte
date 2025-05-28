@@ -5,6 +5,7 @@
 	import { fly } from 'svelte/transition';
 	import { Tween } from 'svelte/motion';
 	import { cubicOut } from 'svelte/easing';
+	import { ChevronRightOutline, MapPinAltSolid, SearchOutline } from 'flowbite-svelte-icons';
 
 	// Helper functions
 	function formatDistance(km: number): string {
@@ -449,7 +450,7 @@
 			.dropdown {
 				width: 100% !important;
 				max-width: 100% !important;
-		}
+			}
 			`;
 
 			shadow.appendChild(style);
@@ -485,16 +486,7 @@
 	>
 		<div class="bg-yellow-400/20 px-4 py-2.5 rounded-t-2xl border-b border-white/10">
 			<div class="text-white font-medium flex items-center gap-2">
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					class="h-5 w-5"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-				>
-					<path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6" />
-				</svg>
+				<ChevronRightOutline class="h-5 w-5" />
 				Fahrt planen
 			</div>
 		</div>
@@ -523,26 +515,7 @@
 									<div class="absolute bottom-0 left-0 right-0 p-2 space-y-0.5">
 										<div class="font-medium text-white text-sm">{car.model}</div>
 										<div class="text-xs text-gray-300 flex items-center gap-1">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												class="h-3 w-3"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-												/>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-												/>
-											</svg>
+											<MapPinAltSolid class="h-3 w-3" />
 											{car.address}
 										</div>
 									</div>
@@ -558,21 +531,7 @@
 				<div class="w-full flex flex-col">
 					<div class="relative">
 						<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-							<svg
-								class="w-4 h-4 text-gray-400"
-								aria-hidden="true"
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 20 20"
-							>
-								<path
-									stroke="currentColor"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"
-								/>
-							</svg>
+							<SearchOutline class="w-4 h-4 text-gray-400" />
 						</div>
 						<gmp-place-autocomplete
 							id="place-autocomplete-input"
