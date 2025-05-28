@@ -5,7 +5,8 @@
 	import { fly } from 'svelte/transition';
 	import { Tween } from 'svelte/motion';
 	import { cubicOut } from 'svelte/easing';
-	import { ChevronRightOutline, MapPinAltSolid, SearchOutline } from 'flowbite-svelte-icons';
+	import { MapPinAltSolid, SearchOutline } from 'flowbite-svelte-icons';
+	import { AccordionItem, Accordion } from 'flowbite-svelte';
 
 	// Helper functions
 	function formatDistance(km: number): string {
@@ -477,165 +478,198 @@
 		range={1079.504385144246}
 		roll={0}
 		mode="HYBRID"
-		class="h-full w-full"
+		class="h-full w-full fixed inset-0"
 	></gmp-map-3d>
 
-	<div
-		class="absolute left-4 top-4 z-10 rounded-2xl backdrop-blur-md bg-black/30 border border-white/10 shadow-2xl w-[490px]"
-		id="pac-card"
-	>
-		<div class="bg-yellow-400/20 px-4 py-2.5 rounded-t-2xl border-b border-white/10">
-			<div class="text-white font-medium flex items-center gap-2">
-				<ChevronRightOutline class="h-5 w-5" />
-				Fahrt planen
-			</div>
-		</div>
-		<div class="p-4 space-y-4">
-			<div>
-				<label class="text-sm font-medium text-white/90">Wähle dein Fahrzeug:</label>
-				<div class="relative mt-2">
-					<div class="grid grid-cols-2 gap-3">
-						{#each cars as car, i}
-							<button
-								class="group flex flex-col rounded-xl border transition-all hover:scale-[1.02] hover:shadow-lg {selectedCarIndex ===
-								i
-									? 'border-yellow-400 border-3 bg-white/10 shadow-2xl shadow-yellow-400/20'
-									: 'border-white/10 bg-black/20'}"
-								onclick={() => (selectedCarIndex = i)}
-							>
-								<div class="relative w-full h-36 overflow-hidden rounded-xl">
-									<img
-										src={car.imageURL}
-										alt={car.model}
-										class="w-full h-full object-cover transition-transform group-hover:scale-105"
-									/>
+	<div class="relative z-10 p-4 space-y-4 md:p-0">
+		<div class="md:absolute md:left-4 md:top-4 w-full md:w-[490px]">
+			<Accordion class="bg-black/60 backdrop-blur-lg rounded-2xl" flush>
+				<AccordionItem
+					open
+					class="rounded-2xl border border-white/20 shadow-2xl [&_*]:border-0"
+					headerClass="bg-yellow-400/30 px-5 py-2 rounded-t-2xl text-white font-medium [&_*]:border-0 [&_*]:cursor-pointer [&_*]:shadow-none"
+					contentClass="border-0 p-3"
+				>
+					{#snippet header()}
+						<div class="text-white font-medium">Fahrt planen</div>
+					{/snippet}
+					<div class="space-y-2">
+						<div>
+							<label class="text-sm font-medium text-white/90">Wähle dein Fahrzeug:</label>
+							<div class="relative mt-2">
+								<div class="grid grid-cols-2 gap-3">
+									{#each cars as car, i}
+										<button
+											class="cursor-pointer group flex flex-col rounded-xl border-2 transition-all hover:scale-[1.02] hover:shadow-lg {selectedCarIndex ===
+											i
+												? 'border-yellow-400 bg-white/10 shadow-2xl shadow-yellow-400/20'
+												: 'border-white/20 bg-black/30 hover:border-white/40'}"
+											onclick={() => (selectedCarIndex = i)}
+										>
+											<div class="relative w-full h-36 overflow-hidden rounded-xl">
+												<img
+													src={car.imageURL}
+													alt={car.model}
+													class="w-full h-full object-cover transition-transform group-hover:scale-105"
+												/>
+												<div
+													class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"
+												></div>
+												<div class="absolute bottom-0 left-0 right-0 p-2 space-y-0.5">
+													<div class="font-medium text-white text-sm">{car.model}</div>
+													<div class="text-xs text-gray-300 flex items-center gap-1">
+														<MapPinAltSolid class="h-3 w-3" />
+														{car.address}
+													</div>
+												</div>
+											</div>
+										</button>
+									{/each}
+								</div>
+							</div>
+						</div>
+
+						<div class="space-y-4">
+							<label class="text-sm font-medium text-white/90">Ziel eingeben:</label>
+							<div class="w-full flex flex-col">
+								<div class="relative">
 									<div
-										class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"
-									></div>
-									<div class="absolute bottom-0 left-0 right-0 p-2 space-y-0.5">
-										<div class="font-medium text-white text-sm">{car.model}</div>
-										<div class="text-xs text-gray-300 flex items-center gap-1">
-											<MapPinAltSolid class="h-3 w-3" />
-											{car.address}
-										</div>
+										class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none"
+									>
+										<SearchOutline class="w-4 h-4 text-gray-400" />
+									</div>
+									<gmp-place-autocomplete
+										id="place-autocomplete-input"
+										bind:this={placeAutocomplete}
+										ongmp-select={onAutocompleteSelect}
+										requestedLanguage="de"
+										requestedRegion="de"
+										locationBias={selectedCar.coordinates}
+										unit-system="metric"
+										class="p-3.5 pl-10 rounded-lg bg-white/95 max-w-full shadow-lg"
+									></gmp-place-autocomplete>
+								</div>
+							</div>
+						</div>
+					</div>
+				</AccordionItem>
+			</Accordion>
+		</div>
+
+		{#if detailsVisible}
+			<div
+				transition:fly={{ x: 300, duration: 500, opacity: 1 }}
+				class="w-full md:w-[320px] md:absolute md:right-4 md:top-4"
+			>
+				<Accordion class="bg-black/60 backdrop-blur-lg rounded-2xl outline-0" flush>
+					<AccordionItem
+						open
+						class="rounded-2xl border border-white/20 shadow-2xl"
+						headerClass="bg-yellow-400/30 px-5 py-2 rounded-t-2xl text-white font-medium [&_*]:border-0 [&_*]:cursor-pointer [&_*]:shadow-none"
+						contentClass="border-0 p-3"
+					>
+						{#snippet header()}
+							<div class="text-white font-medium">Fahrtdetails</div>
+						{/snippet}
+						<div class="space-y-2">
+							<div class="flex items-center gap-3 bg-white/10 rounded-lg p-2.5 shadow-inner">
+								<input
+									type="time"
+									bind:value={startTime}
+									class="flex-1 px-3 py-2 text-sm bg-black/30 text-white rounded border border-white/20 focus:outline-none focus:border-yellow-400/50 transition-colors"
+								/>
+								<span class="text-sm text-white/90">Startzeit</span>
+							</div>
+
+							<div class="border-t border-white/10 pt-3">
+								<div class="font-medium mb-2 text-blue-100">Hinfahrt</div>
+								<div class="grid grid-cols-2 gap-2 text-sm text-white/90">
+									{#if routeDistance}<div>
+											Entfernung: <span class="font-medium"
+												>{formatDistance(outwardKmTween.current)}</span
+											>
+										</div>{/if}
+									{#if routeDuration}<div>
+											Dauer: <span class="font-medium"
+												>{Math.round(outwardMinutesTween.current)} min</span
+											>
+										</div>{/if}
+								</div>
+							</div>
+
+							<div class="border-t border-white/10 pt-3 max-w-[300px]">
+								<div class="font-medium mb-2 text-blue-100 truncate">
+									Zeit {placeName ? 'in ' + placeName : 'am Zielort'}
+								</div>
+								<div class="flex items-center gap-3 bg-white/10 rounded-lg p-2.5 shadow-inner">
+									<input
+										type="number"
+										min="0"
+										step="0.5"
+										bind:value={hoursAtDestination}
+										class="flex-1 px-3 py-2 text-sm bg-black/30 text-white rounded border border-white/20 focus:outline-none focus:border-yellow-400/50 transition-colors"
+									/>
+									<span class="text-sm text-white/90">Stunden</span>
+								</div>
+							</div>
+
+							<div class="border-t border-white/10 pt-3">
+								<div class="font-medium mb-2 text-blue-100">Rückfahrt</div>
+								<div class="grid grid-cols-2 gap-2 text-sm text-white/90">
+									{#if returnRouteDistance}<div>
+											Entfernung: <span class="font-medium"
+												>{formatDistance(returnKmTween.current)}</span
+											>
+										</div>{/if}
+									{#if returnRouteDuration}<div>
+											Dauer: <span class="font-medium"
+												>{Math.round(returnMinutesTween.current)} min</span
+											>
+										</div>{/if}
+								</div>
+							</div>
+
+							{#if totalDuration}
+								<div class="border-t border-white/10 pt-3">
+									<div class="font-medium mb-2 text-blue-100">Kostenberechnung</div>
+									<div class="space-y-2">
+										{#if kmPrice}
+											<div class="bg-white/10 rounded-lg p-3 shadow-inner">
+												<div class="text-xs text-white/80">
+													Kilometerkosten ({formatDistance(totalKm)})
+												</div>
+												<div class="text-lg font-medium text-white/80">
+													{formatPrice(kmPriceTween.current)}
+												</div>
+											</div>
+										{/if}
+
+										{#if timePrice}
+											<div class="bg-white/10 rounded-lg p-3 shadow-inner">
+												<div class="text-xs text-white/80">
+													Zeitkosten ({Math.round(totalMinutes)} min)
+												</div>
+												<div class="text-lg font-medium text-white/80">
+													{formatPrice(timePriceTween.current)}
+												</div>
+											</div>
+										{/if}
+
+										{#if totalPrice}
+											<div class="bg-yellow-400/30 rounded-lg p-4 mt-3 shadow-lg">
+												<div class="text-xs text-white/90">Gesamtkosten</div>
+												<div class="text-2xl font-medium text-white mt-0.5">
+													{formatPrice(totalPriceTween.current)}
+												</div>
+											</div>
+										{/if}
 									</div>
 								</div>
-							</button>
-						{/each}
-					</div>
-				</div>
-			</div>
-
-			<div class="space-y-2">
-				<label class="text-sm font-medium text-white/90">Ziel eingeben:</label>
-				<div class="w-full flex flex-col">
-					<div class="relative">
-						<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-							<SearchOutline class="w-4 h-4 text-gray-400" />
+							{/if}
 						</div>
-						<gmp-place-autocomplete
-							id="place-autocomplete-input"
-							bind:this={placeAutocomplete}
-							ongmp-select={onAutocompleteSelect}
-							requestedLanguage="de"
-							requestedRegion="de"
-							locationBias={selectedCar.coordinates}
-							unit-system="metric"
-							class="p-3 pl-8 rounded-lg bg-white max-w-full"
-						></gmp-place-autocomplete>
-					</div>
-				</div>
+					</AccordionItem>
+				</Accordion>
 			</div>
-		</div>
+		{/if}
 	</div>
-
-	{#if detailsVisible}
-		<div
-			transition:fly={{ x: 300, duration: 500, opacity: 1 }}
-			class="absolute right-4 top-4 z-10 rounded-2xl backdrop-blur-md bg-black/30 border border-white/10 p-4 text-white space-y-3 shadow-xl min-w-[300px]"
-		>
-			<div class="flex items-center gap-3 bg-white/5 rounded-lg p-2">
-				<input
-					type="time"
-					bind:value={startTime}
-					class="flex-1 px-2 py-1.5 text-sm bg-black/20 text-white rounded border border-white/10 focus:outline-none focus:border-blue-400"
-				/>
-				<span class="text-sm text-white/70">Startzeit</span>
-			</div>
-
-			<div class="border-t border-white/10 pt-3">
-				<div class="font-medium mb-2 text-blue-200">Hinfahrt</div>
-				<div class="grid grid-cols-2 gap-2 text-sm">
-					{#if routeDistance}<div>
-							Entfernung: <span class="font-medium">{formatDistance(outwardKmTween.current)}</span>
-						</div>{/if}
-					{#if routeDuration}<div>
-							Dauer: <span class="font-medium">{Math.round(outwardMinutesTween.current)} min</span>
-						</div>{/if}
-				</div>
-			</div>
-
-			<div class="border-t border-white/10 pt-3 max-w-[300px]">
-				<div class="font-medium mb-2 text-blue-200 truncate">
-					Zeit {placeName ? 'in ' + placeName : 'am Zielort'}
-				</div>
-				<div class="flex items-center gap-3 bg-white/5 rounded-lg p-2">
-					<input
-						type="number"
-						min="0"
-						step="0.5"
-						bind:value={hoursAtDestination}
-						class="flex-1 px-2 py-1.5 text-sm bg-black/20 text-white rounded border border-white/10 focus:outline-none focus:border-blue-400"
-					/>
-					<span class="text-sm text-white/70">Stunden</span>
-				</div>
-			</div>
-
-			<div class="border-t border-white/10 pt-3">
-				<div class="font-medium mb-2 text-blue-200">Rückfahrt</div>
-				<div class="grid grid-cols-2 gap-2 text-sm">
-					{#if returnRouteDistance}<div>
-							Entfernung: <span class="font-medium">{formatDistance(returnKmTween.current)}</span>
-						</div>{/if}
-					{#if returnRouteDuration}<div>
-							Dauer: <span class="font-medium">{Math.round(returnMinutesTween.current)} min</span>
-						</div>{/if}
-				</div>
-			</div>
-
-			{#if totalDuration}
-				<div class="border-t border-white/10 pt-3">
-					<div class="font-medium mb-2 text-blue-200">Kostenberechnung</div>
-					<div class="space-y-2">
-						{#if kmPrice}
-							<div class="bg-white/5 rounded-lg p-2">
-								<div class="text-xs text-white/70">Kilometerkosten ({formatDistance(totalKm)})</div>
-								<div class="text-lg font-medium">
-									{formatPrice(kmPriceTween.current)}
-								</div>
-							</div>
-						{/if}
-
-						{#if timePrice}
-							<div class="bg-white/5 rounded-lg p-2">
-								<div class="text-xs text-white/70">Zeitkosten ({Math.round(totalMinutes)} min)</div>
-								<div class="text-lg font-medium">
-									{formatPrice(timePriceTween.current)}
-								</div>
-							</div>
-						{/if}
-
-						{#if totalPrice}
-							<div class="bg-yellow-400/20 rounded-lg p-3 mt-3">
-								<div class="text-xs text-white/70">Gesamtkosten</div>
-								<div class="text-2xl font-medium text-white">
-									{formatPrice(totalPriceTween.current)}
-								</div>
-							</div>
-						{/if}
-					</div>
-				</div>
-			{/if}
-		</div>
-	{/if}
 </div>
