@@ -257,131 +257,125 @@
 			return selectedDate;
 		};
 
-		// Calculate outward route
-		directionsService
-			.route({
-				origin: new google.maps.LatLng(selectedCar.coordinates.lat, selectedCar.coordinates.lng),
-				destination: destination,
+		// Calculate route with waypoint
+		try {
+			const origin = new google.maps.LatLng(
+				selectedCar.coordinates.lat,
+				selectedCar.coordinates.lng
+			);
+			const response = await directionsService.route({
+				origin: origin,
+				destination: origin,
+				waypoints: [
+					{
+						location: destination,
+						stopover: true
+					}
+				],
 				travelMode: google.maps.TravelMode.DRIVING,
 				drivingOptions: {
 					departureTime: getDepartureDate()
 				}
-			})
-			.then((response) => {
-				const route = response.routes[0];
-				if (!route || !route.legs?.[0]) {
-					throw new Error('No route found');
-				}
-
-				const points = route.overview_path;
-				const distance = route.legs[0].distance?.value ?? 0;
-				const duration = route.legs[0].duration?.value ?? 0;
-
-				// Update outward route state variables
-				routeDistance = distance / 1000;
-				routeDuration = duration / 60;
-				detailsVisible = true;
-
-				// Create outward route polyline
-				const polyline = new google.maps.maps3d.Polyline3DElement({
-					coordinates: points.map((point) => ({ lat: point.lat(), lng: point.lng() })),
-					strokeColor: 'blue',
-					outerColor: 'white',
-					strokeWidth: 10,
-					outerWidth: 0.4,
-					altitudeMode: google.maps.maps3d.AltitudeMode.RELATIVE_TO_GROUND,
-					drawsOccludedSegments: true
-				});
-
-				// Remove previous route polyline if it exists
-				if (currentRoutePolyline) {
-					map.removeChild(currentRoutePolyline);
-					currentRoutePolyline = null;
-				}
-				// Add new polyline and store reference
-				map.append(polyline);
-				currentRoutePolyline = polyline;
-
-				// Calculate return route
-				return directionsService.route({
-					origin: destination,
-					destination: new google.maps.LatLng(
-						selectedCar.coordinates.lat,
-						selectedCar.coordinates.lng
-					),
-					travelMode: google.maps.TravelMode.DRIVING
-				});
-			})
-			.then((response) => {
-				const route = response.routes[0];
-				if (!route || !route.legs?.[0]) {
-					throw new Error('No return route found');
-				}
-
-				const points = route.overview_path;
-				const distance = route.legs[0].distance?.value ?? 0;
-				const duration = route.legs[0].duration?.value ?? 0;
-
-				// Update return route state variables
-				returnRouteDistance = distance / 1000;
-				returnRouteDuration = duration / 60;
-
-				// Calculate total duration including time at destination
-				const outwardMinutes = routeDuration;
-				const returnMinutes = duration / 60;
-				const destinationMinutes = hoursAtDestination * 60;
-				totalDuration = `${outwardMinutes + returnMinutes + destinationMinutes} min total`;
-
-				// Create return route polyline
-				const returnPolyline = new google.maps.maps3d.Polyline3DElement({
-					coordinates: points.map((point) => ({ lat: point.lat(), lng: point.lng() })),
-					strokeColor: 'red',
-					outerColor: 'white',
-					strokeWidth: 10,
-					outerWidth: 0.4,
-					altitudeMode: google.maps.maps3d.AltitudeMode.RELATIVE_TO_GROUND,
-					drawsOccludedSegments: true
-				});
-
-				// Remove previous return route polyline if it exists
-				if (returnRoutePolyline) {
-					map.removeChild(returnRoutePolyline);
-					returnRoutePolyline = null;
-				}
-				// Add new return polyline and store reference
-				map.append(returnPolyline);
-				returnRoutePolyline = returnPolyline;
-
-				const bounds: google.maps.LatLngBounds = route.bounds;
-
-				// Calculate center and range for the camera
-				const center = bounds.getCenter();
-				const range = Math.max(
-					google.maps.geometry.spherical.computeDistanceBetween(
-						bounds.getNorthEast(),
-						bounds.getCenter()
-					) * 2,
-					2000 // Minimum range in meters
-				);
-				//@ts-ignore
-				map.flyCameraTo({
-					endCamera: {
-						center: {
-							lat: center.lat(),
-							lng: center.lng(),
-							altitude: range * 0.9
-						},
-						range: range,
-						tilt: 0,
-						heading: 0
-					},
-					durationMillis: 1000
-				});
-			})
-			.catch((e: Error) => {
-				console.error(e.message);
-				throw e;
 			});
+
+			const route = response.routes[0];
+			if (!route || route.legs?.length !== 2) {
+				throw new Error('Invalid route response');
+			}
+
+			// First leg is outward journey
+			const outwardLeg = route.legs[0];
+			const outwardPoints = route.overview_path.slice(
+				0,
+				Math.floor(route.overview_path.length / 2)
+			);
+			routeDistance = (outwardLeg.distance?.value ?? 0) / 1000;
+			routeDuration = (outwardLeg.duration?.value ?? 0) / 60;
+
+			// Second leg is return journey
+			const returnLeg = route.legs[1];
+			const returnPoints = route.overview_path.slice(Math.floor(route.overview_path.length / 2));
+			returnRouteDistance = (returnLeg.distance?.value ?? 0) / 1000;
+			returnRouteDuration = (returnLeg.duration?.value ?? 0) / 60;
+
+			detailsVisible = true;
+
+			// Create outward route polyline
+			const outwardPolyline = new google.maps.maps3d.Polyline3DElement({
+				coordinates: outwardPoints.map((point) => ({
+					lat: point.lat(),
+					lng: point.lng()
+				})),
+				strokeColor: 'blue',
+				outerColor: 'white',
+				strokeWidth: 10,
+				outerWidth: 0.4,
+				altitudeMode: google.maps.maps3d.AltitudeMode.CLAMP_TO_GROUND,
+				drawsOccludedSegments: true
+			});
+
+			// Remove previous route polyline if it exists
+			if (currentRoutePolyline) {
+				map.removeChild(currentRoutePolyline);
+				currentRoutePolyline = null;
+			}
+			// Add new polyline and store reference
+			map.append(outwardPolyline);
+			currentRoutePolyline = outwardPolyline;
+
+			// Create return route polyline
+			const returnPolyline = new google.maps.maps3d.Polyline3DElement({
+				coordinates: returnPoints.map((point) => ({
+					lat: point.lat(),
+					lng: point.lng(),
+					altitude: 0.1
+				})),
+				strokeColor: 'red',
+				outerColor: 'white',
+				strokeWidth: 10,
+				outerWidth: 0.4,
+				altitudeMode: google.maps.maps3d.AltitudeMode.RELATIVE_TO_GROUND,
+				drawsOccludedSegments: true
+			});
+
+			// Remove previous return route polyline if it exists
+			if (returnRoutePolyline) {
+				map.removeChild(returnRoutePolyline);
+				returnRoutePolyline = null;
+			}
+			// Add new return polyline and store reference
+			map.append(returnPolyline);
+			returnRoutePolyline = returnPolyline;
+
+			const bounds: google.maps.LatLngBounds = route.bounds;
+
+			// Calculate center and range for the camera
+			const center = bounds.getCenter();
+			const range = Math.max(
+				google.maps.geometry.spherical.computeDistanceBetween(
+					bounds.getNorthEast(),
+					bounds.getCenter()
+				) * 2,
+				2000 // Minimum range in meters
+			);
+			//@ts-ignore
+			map.flyCameraTo({
+				endCamera: {
+					center: {
+						lat: center.lat(),
+						lng: center.lng(),
+						altitude: range * 0.9
+					},
+					range: range,
+					tilt: 0,
+					heading: 0
+				},
+				durationMillis: 1000
+			});
+		} catch (error) {
+			console.error('Route calculation failed:', error);
+			throw error;
+		}
 	}
 
 	// Add effect to recalculate total duration when hours change
