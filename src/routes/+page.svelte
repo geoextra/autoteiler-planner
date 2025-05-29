@@ -588,7 +588,7 @@
 								</div>
 							</div>
 
-							<div class="border-t border-white/10 pt-3 max-w-[300px]">
+							<div class="border-t border-white/10 pt-3">
 								<div class="font-medium mb-2 text-blue-100 truncate">
 									Zeit {placeName ? 'in ' + placeName : 'am Zielort'}
 								</div>
