@@ -466,11 +466,8 @@
 	<gmp-map-3d
 		id="map"
 		bind:this={map}
-		center={{ lat: 48.01596129402924, lng: 11.585830501630623, altitude: 550 }}
-		tilt={72}
-		heading={-75.56109650818874}
-		range={1079.504385144246}
-		roll={0}
+		center={{ lat: 48.019, lng: 11.583, altitude: 3500 }}
+		tilt={0}
 		mode="HYBRID"
 		class="h-full w-full fixed inset-0"
 	></gmp-map-3d>
