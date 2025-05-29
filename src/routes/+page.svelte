@@ -585,14 +585,14 @@
 								<div class="font-medium mb-2 text-blue-100">Hinfahrt</div>
 								<div class="grid grid-cols-2 gap-2 text-sm text-white/90">
 									{#if routeDistance}<div>
-											Entfernung: <span class="font-medium"
-												>{formatDistance(outwardKmTween.current)}</span
-											>
+											Entfernung: <span class="font-medium">
+												{formatDistance(outwardKmTween.current)}
+											</span>
 										</div>{/if}
 									{#if routeDuration}<div>
-											Dauer: <span class="font-medium"
-												>{Math.round(outwardMinutesTween.current)} min</span
-											>
+											Dauer: <span class="font-medium">
+												{Math.round(outwardMinutesTween.current)} min
+											</span>
 										</div>{/if}
 								</div>
 							</div>
