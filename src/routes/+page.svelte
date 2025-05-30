@@ -143,7 +143,7 @@
 			apiKey: PUBLIC_GOOGLE_MAPS_API_KEY,
 			version: 'beta',
 			//@ts-ignore
-			libraries: ['maps', 'marker', 'places', 'maps3d']
+			libraries: ['marker', 'places', 'maps3d']
 		});
 
 		// Load required libraries
