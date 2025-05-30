@@ -5,8 +5,8 @@
 	import { fly } from 'svelte/transition';
 	import { Tween } from 'svelte/motion';
 	import { cubicOut } from 'svelte/easing';
-	import { ClockSolid, MapPinAltSolid, SearchOutline } from 'flowbite-svelte-icons';
-	import { AccordionItem, Accordion, Badge } from 'flowbite-svelte';
+	import { MapPinAltSolid, SearchOutline } from 'flowbite-svelte-icons';
+	import { AccordionItem, Accordion } from 'flowbite-svelte';
 
 	interface Car {
 		model: string;
