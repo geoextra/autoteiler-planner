@@ -5,8 +5,8 @@
 	import { fly } from 'svelte/transition';
 	import { Tween } from 'svelte/motion';
 	import { cubicOut } from 'svelte/easing';
-	import { MapPinAltSolid, SearchOutline } from 'flowbite-svelte-icons';
-	import { AccordionItem, Accordion } from 'flowbite-svelte';
+	import { ClockSolid, MapPinAltSolid, SearchOutline } from 'flowbite-svelte-icons';
+	import { AccordionItem, Accordion, Badge } from 'flowbite-svelte';
 
 	interface Car {
 		model: string;
@@ -80,9 +80,9 @@
 
 	// Update tweened values when actual values change
 	$effect(() => {
-		kmPriceTween.target = kmPriceValue;
-		timePriceTween.target = timePriceValue;
-		totalPriceTween.target = kmPriceValue + timePriceValue;
+		kmPriceTween.target = kmPrice;
+		timePriceTween.target = timePrice;
+		totalPriceTween.target = kmPrice + timePrice;
 		outwardKmTween.target = outwardKm;
 		returnKmTween.target = returnKm;
 		outwardMinutesTween.target = outwardMinutes;
@@ -99,39 +99,38 @@
 	let totalMinutes = $derived(outwardMinutes + returnMinutes + hoursAtDestination * 60);
 	let totalHours = $derived(totalMinutes / 60);
 
-	let totalDuration = $derived(`${totalMinutes} min total`);
+	// Split total hours into day and night hours
+	let dayHours = $derived(calculateDayHours());
+
+	function calculateDayHours(): number {
+		if (!startTime || !totalHours) return 0;
+		const startDate = new Date();
+		const [hours, minutes] = startTime.split(':').map(Number);
+		startDate.setHours(hours, minutes, 0, 0);
+
+		let currentTime = new Date(startDate);
+		let dayHoursCount = 0;
+		const endTime = new Date(startDate.getTime() + totalHours * 60 * 60 * 1000);
+
+		while (currentTime < endTime) {
+			const hour = currentTime.getHours();
+			if (hour >= 8 && hour < 20) {
+				dayHoursCount++;
+			}
+			currentTime.setHours(currentTime.getHours() + 1);
+		}
+
+		return dayHoursCount;
+	}
+
+	let nightHours = $derived(Math.ceil(totalHours - dayHours));
 
 	// Derived values for pricing calculations
-	let kmPriceValue = $derived(
-		totalKm ? Math.min(totalKm, 200) * 0.35 + Math.max(0, totalKm - 200) * 0.25 : 0
-	);
+	let kmPrice = $derived(Math.min(totalKm, 200) * 0.35 + Math.max(0, totalKm - 200) * 0.25);
 
-	let kmPrice = $derived(`${kmPriceValue.toFixed(2)} €`);
+	let timePrice = $derived(dayHours * 1.0 + nightHours * 0.2);
 
-	let timePriceValue = $derived(
-		startTime && totalHours
-			? (() => {
-					const startDate = new Date();
-					const [hours, minutes] = startTime.split(':').map(Number);
-					startDate.setHours(hours, minutes, 0, 0);
-
-					let currentTime = new Date(startDate);
-					let totalTimePrice = 0;
-					const endTime = new Date(startDate.getTime() + totalHours * 60 * 60 * 1000);
-
-					while (currentTime < endTime) {
-						const hour = currentTime.getHours();
-						totalTimePrice += hour >= 8 && hour < 20 ? 1.0 : 0.2;
-						currentTime.setHours(currentTime.getHours() + 1);
-					}
-
-					return totalTimePrice;
-				})()
-			: 0
-	);
-
-	let timePrice = $derived(`${timePriceValue.toFixed(2)} €`);
-	let totalPrice = $derived(`${(kmPriceValue + timePriceValue).toFixed(2)} €`);
+	let totalPrice = $derived(kmPrice + timePrice);
 
 	let map: google.maps.maps3d.Map3DElement;
 	let placeAutocomplete: google.maps.places.PlaceAutocompleteElement;
@@ -383,7 +382,6 @@
 			const outwardMinutes = routeDuration;
 			const returnMinutes = returnRouteDuration;
 			const destinationMinutes = hoursAtDestination * 60;
-			totalDuration = `${outwardMinutes + returnMinutes + destinationMinutes} min total`;
 		}
 	});
 
@@ -651,7 +649,7 @@
 								</div>
 							</div>
 
-							{#if totalDuration}
+							{#if totalPrice}
 								<div class="border-t border-white/10 pt-3">
 									<div class="font-medium mb-2 text-blue-100">Kostenberechnung</div>
 									<div class="space-y-2">
@@ -669,7 +667,7 @@
 										{#if timePrice}
 											<div class="bg-white/10 rounded-lg p-3 shadow-inner">
 												<div class="text-xs text-white/80">
-													Zeitkosten ({Math.round(totalMinutes)} min)
+													Zeitkosten ({dayHours} h ☀️ + {nightHours} h 🌙)
 												</div>
 												<div class="text-lg font-medium text-white/80">
 													{formatPrice(timePriceTween.current)}
