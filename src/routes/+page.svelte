@@ -410,22 +410,18 @@
 		return elevation;
 	}
 
-	// style the autocomplete input
-	const attachShadow = Element.prototype.attachShadow;
-	Element.prototype.attachShadow = function (init: ShadowRootInit) {
-		// Check if we are the new Google places autocomplete element...
-		if (this.localName === 'gmp-place-autocomplete') {
-			// If we are, we need to override the default behaviour of attachShadow() to
-			// set the mode to open to allow us to crowbar a style element into the shadow DOM.
-			const shadow = attachShadow.call(this, {
-				...init,
-				mode: 'open'
-			});
+	function applyAutocompleteShadowStyles(element: Element) {
+		const shadow = element.shadowRoot;
+		if (!shadow) return;
 
-			const style = document.createElement('style');
+		// Remove existing style if present
+		const existingStyle = shadow.querySelector('style');
+		if (existingStyle) {
+			existingStyle.remove();
+		}
 
-			// Apply our own styles to the shadow DOM.
-			style.textContent = `
+		const style = document.createElement('style');
+		style.textContent = `
 			.widget-container {
 				border: none !important;
 			}
@@ -446,9 +442,24 @@
 				width: 100% !important;
 				max-width: 100% !important;
 			}
-			`;
+		`;
 
-			shadow.appendChild(style);
+		shadow.appendChild(style);
+	}
+
+	// style the autocomplete input
+	const attachShadow = Element.prototype.attachShadow;
+	Element.prototype.attachShadow = function (init: ShadowRootInit) {
+		// Check if we are the new Google places autocomplete element...
+		if (this.localName === 'gmp-place-autocomplete') {
+			// If we are, we need to override the default behaviour of attachShadow() to
+			// set the mode to open to allow us to crowbar a style element into the shadow DOM.
+			const shadow = attachShadow.call(this, {
+				...init,
+				mode: 'open'
+			});
+
+			applyAutocompleteShadowStyles(this);
 
 			// Set the shadowRoot property to the new shadow root that has our styles in it.
 			return shadow;
@@ -456,6 +467,27 @@
 		// ...for other elements, proceed with the original behaviour of attachShadow().
 		return attachShadow.call(this, init);
 	};
+
+	// Watch for visibility changes
+	$effect(() => {
+		if (placeAutocomplete) {
+			const observer = new MutationObserver((mutations) => {
+				mutations.forEach((mutation) => {
+					if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+						applyAutocompleteShadowStyles(placeAutocomplete);
+					}
+				});
+			});
+
+			observer.observe(placeAutocomplete, {
+				attributes: true,
+				attributeFilter: ['style']
+			});
+
+			// Initial application of styles
+			applyAutocompleteShadowStyles(placeAutocomplete);
+		}
+	});
 </script>
 
 <svelte:head>
