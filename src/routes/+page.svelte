@@ -8,6 +8,46 @@
 	import { MapPinAltSolid, SearchOutline } from 'flowbite-svelte-icons';
 	import { AccordionItem, Accordion } from 'flowbite-svelte';
 
+	interface Car {
+		model: string;
+		address: string;
+		imageURL: string;
+		coordinates: google.maps.LatLngLiteral;
+	}
+
+	const cars: Car[] = [
+		{
+			model: 'Dacia Jogger',
+			address: 'Hinteres Gleißental 19, Oberhaching',
+			imageURL:
+				'https://www.autoteiler-oberhaching.de/wp-content/uploads/go-x/u/5b971129-3306-45bb-8827-11d926a8945a/l0,t0,w1280,h960/image-683x512.jpg',
+			coordinates: { lat: 48.0148737, lng: 11.5886307 }
+		},
+		{
+			model: 'Toyota Proace City',
+			address: 'Hubertusstr. 11, Oberhaching',
+			imageURL:
+				'https://www.autoteiler-oberhaching.de/wp-content/uploads/go-x/u/03241f99-6f5c-4709-978c-66d34f8fd594/l0,t0,w600,h450/image.jpg',
+			coordinates: { lat: 48.0200973, lng: 11.5848989 }
+		},
+		{
+			model: 'Fiat Punto',
+			address: 'Josefstr. 45, Oberhaching',
+			imageURL:
+				'https://www.autoteiler-oberhaching.de/wp-content/uploads/go-x/u/58f1b4dd-cf7a-4f79-89e3-bff9aadcf36d/l160,t0,w480,h360/image.jpg',
+			coordinates: { lat: 48.0138089, lng: 11.5905707 }
+		},
+		{
+			model: 'Toyota Aygo X',
+			address: 'Laufzorner Str. 11, Oberhaching',
+			imageURL:
+				'https://www.autoteiler-oberhaching.de/wp-content/uploads/go-x/u/45205f0e-6a98-44cf-9741-2091dce570b6/l23,t197,w545,h409/image.jpg',
+			coordinates: { lat: 48.0221586, lng: 11.5768658 }
+		}
+	];
+
+	let selectedCar = $state(cars[0]);
+
 	// Helper functions
 	function formatDistance(km: number): string {
 		return `${km.toFixed(1).replace('.', ',')} km`;
@@ -26,7 +66,6 @@
 	let startTime = $state('09:00');
 	let detailsVisible = $state(false);
 	let placeName = $state('');
-	let selectedCarIndex = $state(0);
 	let currentDestination = $state<google.maps.LatLng | null>(null);
 
 	// Tweened values for animations
@@ -100,46 +139,6 @@
 	let returnRoutePolyline: google.maps.maps3d.Polyline3DElement | null = null;
 	let destinationMarker: google.maps.marker.AdvancedMarkerElement | null = null;
 
-	interface Car {
-		model: string;
-		address: string;
-		imageURL: string;
-		coordinates: google.maps.LatLngLiteral;
-	}
-
-	const cars: Car[] = [
-		{
-			model: 'Dacia Jogger',
-			address: 'Hinteres Gleißental 19, Oberhaching',
-			imageURL:
-				'https://www.autoteiler-oberhaching.de/wp-content/uploads/go-x/u/5b971129-3306-45bb-8827-11d926a8945a/l0,t0,w1280,h960/image-683x512.jpg',
-			coordinates: { lat: 48.0148737, lng: 11.5886307 }
-		},
-		{
-			model: 'Toyota Proace City',
-			address: 'Hubertusstr. 11, Oberhaching',
-			imageURL:
-				'https://www.autoteiler-oberhaching.de/wp-content/uploads/go-x/u/03241f99-6f5c-4709-978c-66d34f8fd594/l0,t0,w600,h450/image.jpg',
-			coordinates: { lat: 48.0200973, lng: 11.5848989 }
-		},
-		{
-			model: 'Fiat Punto',
-			address: 'Josefstr. 45, Oberhaching',
-			imageURL:
-				'https://www.autoteiler-oberhaching.de/wp-content/uploads/go-x/u/58f1b4dd-cf7a-4f79-89e3-bff9aadcf36d/l160,t0,w480,h360/image.jpg',
-			coordinates: { lat: 48.0138089, lng: 11.5905707 }
-		},
-		{
-			model: 'Toyota Aygo X',
-			address: 'Laufzorner Str. 11, Oberhaching',
-			imageURL:
-				'https://www.autoteiler-oberhaching.de/wp-content/uploads/go-x/u/45205f0e-6a98-44cf-9741-2091dce570b6/l23,t197,w545,h409/image.jpg',
-			coordinates: { lat: 48.0221586, lng: 11.5768658 }
-		}
-	];
-
-	let selectedCar = $derived(cars[selectedCarIndex]);
-
 	onMount(async () => {
 		const loader = new Loader({
 			apiKey: PUBLIC_GOOGLE_MAPS_API_KEY,
@@ -190,7 +189,7 @@
 					durationMillis: 50000,
 					rounds: 1
 				}); */
-				selectedCarIndex = cars.findIndex((c) => c.model === car.model);
+				selectedCar = car;
 			});
 
 			map.append(carMarker);
@@ -523,11 +522,11 @@
 								<div class="grid grid-cols-2 gap-3">
 									{#each cars as car, i}
 										<button
-											class="cursor-pointer group flex flex-col rounded-xl border-2 transition-all hover:scale-[1.02] hover:shadow-lg {selectedCarIndex ===
-											i
+											class="cursor-pointer group flex flex-col rounded-xl border-2 transition-all hover:scale-[1.02] hover:shadow-lg {selectedCar.model ===
+											car.model
 												? 'border-yellow-400 bg-white/10 shadow-2xl shadow-yellow-400/20'
 												: 'border-white/20 bg-black/30 hover:border-white/40'}"
-											onclick={() => (selectedCarIndex = i)}
+											onclick={() => (selectedCar = car)}
 										>
 											<div class="relative w-full h-36 overflow-hidden rounded-xl">
 												<img
