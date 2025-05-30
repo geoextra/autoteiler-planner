@@ -376,15 +376,6 @@
 		}
 	}
 
-	// Add effect to recalculate total duration when hours change
-	$effect(() => {
-		if (routeDuration && returnRouteDuration) {
-			const outwardMinutes = routeDuration;
-			const returnMinutes = returnRouteDuration;
-			const destinationMinutes = hoursAtDestination * 60;
-		}
-	});
-
 	async function onAutocompleteSelect({ placePrediction }: { placePrediction: any }) {
 		const place = placePrediction.toPlace();
 		await place.fetchFields({ fields: ['displayName', 'location'] });
@@ -392,19 +383,6 @@
 		const placeLocation = new google.maps.LatLng(place.location.lat(), place.location.lng());
 		calculateAndDisplayRoute(placeLocation);
 		currentDestination = placeLocation;
-	}
-
-	async function getElevationforPoint(location: google.maps.LatLng): Promise<number> {
-		const elevatorService = new google.maps.ElevationService();
-		const elevationResponse = await elevatorService.getElevationForLocations({
-			locations: [location]
-		});
-		if (!(elevationResponse.results && elevationResponse.results.length)) {
-			window.alert(`Insufficient elevation data for location`);
-			return 0;
-		}
-		const elevation = elevationResponse.results[0].elevation ?? 10;
-		return elevation;
 	}
 
 	function applyAutocompleteShadowStyles(element: Element) {
