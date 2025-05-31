@@ -164,8 +164,8 @@
 			const carPinElement = new google.maps.marker.PinElement({
 				background: 'white',
 				borderColor: '#fff200',
-				glyph: '🚖'
-				// glyph: new URL(car.imageURL)
+				glyph: '🚖',
+				scale: 1.5
 			});
 			//@ts-ignore
 			const carMarker = new google.maps.maps3d.Marker3DInteractiveElement({
@@ -228,7 +228,8 @@
 		const destinationPinElement = new google.maps.marker.PinElement({
 			background: 'white',
 			borderColor: 'red',
-			glyph: '📍'
+			glyph: '📍',
+			scale: 1.5
 		});
 		//@ts-ignore
 		const newMarker = new google.maps.maps3d.Marker3DInteractiveElement({
