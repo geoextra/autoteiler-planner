@@ -1,3 +1,2 @@
 /embed
-  Content-Security-Policy: frame-ancestors 'self' https://autoteiler-oberhaching.de https://www.autoteiler-oberhaching.de
-  X-Frame-Options: ALLOW-FROM https://autoteiler-oberhaching.de https://www.autoteiler-oberhaching.de
+  Content-Security-Policy: frame-ancestors 'self' *
