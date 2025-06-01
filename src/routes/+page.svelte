@@ -243,16 +243,14 @@
 
 		// Get departure date based on start time
 		const getDepartureDate = () => {
-			const now = new Date();
-			const [hours, minutes] = startTime.split(':').map(Number);
 			const selectedDate = new Date();
-			selectedDate.setHours(hours, minutes, 0, 0);
-
-			// If selected time is in the past, add days until we reach the same weekday in the future
-			if (selectedDate < now) {
-				selectedDate.setDate(selectedDate.getDate() + 7);
+			try {
+				const [hours, minutes] = startTime.split(':').map(Number);
+				selectedDate.setHours(hours, minutes, 0, 0);
+			} catch (error) {
+				console.error('Error parsing departure date:', error);
 			}
-
+			selectedDate.setDate(selectedDate.getDate() + 7);
 			return selectedDate;
 		};
 
