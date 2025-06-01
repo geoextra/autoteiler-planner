@@ -153,15 +153,19 @@
 	let destinationMarker: google.maps.marker.AdvancedMarkerElement | null = null;
 
 	onMount(async () => {
+		const libraries = ['marker', 'places', 'maps3d'];
 		const loader = new Loader({
 			apiKey: PUBLIC_GOOGLE_MAPS_API_KEY,
 			version: 'beta',
+			language: 'de',
+			region: 'DE',
 			//@ts-ignore
-			libraries: ['marker', 'places', 'maps3d']
+			libraries
 		});
 
-		// Load required libraries
-		await loader.load();
+		// import required libraries
+		//@ts-ignore
+		await Promise.all(libraries.map((lib) => loader.importLibrary(lib)));
 
 		initMap();
 	});
