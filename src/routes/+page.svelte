@@ -57,6 +57,18 @@
 		return `${price.toFixed(2).replace('.', ',')} €`;
 	}
 
+	function parseTime(timeString: string): { hours: number; minutes: number } | null {
+		if (!timeString) return null;
+		try {
+			const [hours, minutes] = timeString.split(':').map(Number);
+			if (isNaN(hours) || isNaN(minutes)) return null;
+			return { hours, minutes };
+		} catch (error) {
+			console.error('Error parsing time:', error);
+			return null;
+		}
+	}
+
 	// Base state variables
 	let routeDistance = $state(0); // km
 	let routeDuration = $state(0); // minutes
@@ -105,8 +117,10 @@
 	function calculateDayHours(): number {
 		if (!startTime || !totalHours) return 0;
 		const startDate = new Date();
-		const [hours, minutes] = startTime.split(':').map(Number);
-		startDate.setHours(hours, minutes, 0, 0);
+		const parsedTime = parseTime(startTime);
+		if (!parsedTime) return 0;
+
+		startDate.setHours(parsedTime.hours, parsedTime.minutes, 0, 0);
 
 		let currentTime = new Date(startDate);
 		let dayHoursCount = 0;
@@ -244,12 +258,8 @@
 		// Get departure date based on start time
 		const getDepartureDate = () => {
 			const selectedDate = new Date();
-			try {
-				const [hours, minutes] = startTime.split(':').map(Number);
-				selectedDate.setHours(hours, minutes, 0, 0);
-			} catch (error) {
-				console.error('Error parsing departure date:', error);
-			}
+			const parsedTime = parseTime(startTime);
+			if (parsedTime) selectedDate.setHours(parsedTime.hours, parsedTime.minutes, 0, 0);
 			selectedDate.setDate(selectedDate.getDate() + 7);
 			return selectedDate;
 		};
