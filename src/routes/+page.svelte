@@ -5,7 +5,7 @@
 	import { fly } from 'svelte/transition';
 	import { Tween } from 'svelte/motion';
 	import { cubicOut } from 'svelte/easing';
-	import { MapPinAltSolid, SearchOutline } from 'flowbite-svelte-icons';
+	import { MapPinAltSolid } from 'flowbite-svelte-icons';
 	import { AccordionItem, Accordion } from 'flowbite-svelte';
 
 	interface Car {
@@ -148,9 +148,10 @@
 
 	let map: google.maps.maps3d.Map3DElement;
 	let placeAutocomplete: google.maps.places.PlaceAutocompleteElement;
-	let currentRoutePolyline: google.maps.maps3d.Polyline3DElement | null = null;
-	let returnRoutePolyline: google.maps.maps3d.Polyline3DElement | null = null;
 	let destinationMarker: google.maps.marker.AdvancedMarkerElement | null = null;
+
+	let currentRoute: Iterable<google.maps.LatLngLiteral> | null = $state(null);
+	let currentReturnRoute: Iterable<google.maps.LatLngLiteral> | null = $state(null);
 
 	onMount(async () => {
 		const libraries = ['marker', 'places', 'maps3d'];
@@ -159,12 +160,12 @@
 			version: 'beta',
 			language: 'de',
 			region: 'DE',
-			//@ts-ignore
+			//@ts-expect-error maps3d not yet included in the types
 			libraries
 		});
 
 		// import required libraries
-		//@ts-ignore
+		//@ts-expect-error maps3d not yet included in the types
 		await Promise.all(libraries.map((lib) => loader.importLibrary(lib)));
 
 		initMap();
@@ -185,7 +186,7 @@
 				glyph: '🚖',
 				scale: 1.5
 			});
-			//@ts-ignore
+			//@ts-expect-error maps3d not yet included in the types
 			const carMarker = new google.maps.maps3d.Marker3DInteractiveElement({
 				position: { lat: car.coordinates.lat, lng: car.coordinates.lng, altitude: 25 },
 				altitudeMode: 'RELATIVE_TO_MESH',
@@ -249,7 +250,7 @@
 			glyph: '📍',
 			scale: 1.5
 		});
-		//@ts-ignore
+		//@ts-expect-error maps3d not yet included in the types
 		const newMarker = new google.maps.maps3d.Marker3DInteractiveElement({
 			position: destination,
 			extruded: true,
@@ -311,52 +312,16 @@
 
 			detailsVisible = true;
 
-			// Create outward route polyline
-			const outwardPolyline = new google.maps.maps3d.Polyline3DElement({
-				coordinates: outwardPoints.map((point) => ({
-					lat: point.lat(),
-					lng: point.lng()
-				})),
-				strokeColor: 'blue',
-				outerColor: 'white',
-				strokeWidth: 10,
-				outerWidth: 0.4,
-				altitudeMode: google.maps.maps3d.AltitudeMode.CLAMP_TO_GROUND,
-				drawsOccludedSegments: true
-			});
+			currentRoute = outwardPoints.map((point) => ({
+				lat: point.lat(),
+				lng: point.lng()
+			}));
 
-			// Remove previous route polyline if it exists
-			if (currentRoutePolyline) {
-				map.removeChild(currentRoutePolyline);
-				currentRoutePolyline = null;
-			}
-			// Add new polyline and store reference
-			map.append(outwardPolyline);
-			currentRoutePolyline = outwardPolyline;
-
-			// Create return route polyline
-			const returnPolyline = new google.maps.maps3d.Polyline3DElement({
-				coordinates: returnPoints.map((point) => ({
-					lat: point.lat(),
-					lng: point.lng(),
-					altitude: 0.1
-				})),
-				strokeColor: 'red',
-				outerColor: 'white',
-				strokeWidth: 10,
-				outerWidth: 0.4,
-				altitudeMode: google.maps.maps3d.AltitudeMode.RELATIVE_TO_GROUND,
-				drawsOccludedSegments: true
-			});
-
-			// Remove previous return route polyline if it exists
-			if (returnRoutePolyline) {
-				map.removeChild(returnRoutePolyline);
-				returnRoutePolyline = null;
-			}
-			// Add new return polyline and store reference
-			map.append(returnPolyline);
-			returnRoutePolyline = returnPolyline;
+			currentReturnRoute = returnPoints.map((point) => ({
+				lat: point.lat(),
+				lng: point.lng(),
+				altitude: 0.1
+			}));
 
 			const bounds: google.maps.LatLngBounds = route.bounds;
 
@@ -369,7 +334,7 @@
 				) * 2,
 				2000 // Minimum range in meters
 			);
-			//@ts-ignore
+			//@ts-expect-error maps3d not yet included in the types
 			map.flyCameraTo({
 				endCamera: {
 					center: {
@@ -413,9 +378,6 @@
 			.widget-container {
 				border: none !important;
 			}
-			.input-container {
-				padding: 0px !important;
-			}
 			.focus-ring {
 				display: none !important;
 			}
@@ -425,10 +387,6 @@
 			input {
 				--tw-text-opacity: 1;
 				background-color: transparent;
-			}
-			.dropdown {
-				width: 100% !important;
-				max-width: 100% !important;
 			}
 		`;
 
@@ -490,7 +448,30 @@
 		tilt={0}
 		mode="HYBRID"
 		class="h-full w-full fixed inset-0"
-	></gmp-map-3d>
+	>
+		{#if currentRoute}
+			<gmp-polyline-3d
+				coordinates={currentRoute}
+				strokeColor="blue"
+				outerColor="white"
+				strokeWidth={10}
+				outerWidth={0.4}
+				altitudeMode="CLAMP_TO_GROUND"
+				drawsOccludedSegments={true}
+			></gmp-polyline-3d>
+		{/if}
+		{#if currentReturnRoute}
+			<gmp-polyline-3d
+				coordinates={currentReturnRoute}
+				strokeColor="red"
+				outerColor="white"
+				strokeWidth={10}
+				outerWidth={0.4}
+				altitudeMode="CLAMP_TO_GROUND"
+				drawsOccludedSegments={true}
+			></gmp-polyline-3d>
+		{/if}
+	</gmp-map-3d>
 
 	<div class="relative z-10 p-4 space-y-4 md:p-0">
 		<div class="md:absolute md:left-4 md:top-4 w-full md:w-[490px]">
@@ -504,64 +485,51 @@
 					{#snippet header()}
 						<div class="text-white font-medium">Fahrt planen</div>
 					{/snippet}
-					<div class="space-y-2">
-						<div>
-							<label class="text-sm font-medium text-white/90">Wähle dein Fahrzeug:</label>
-							<div class="relative mt-2">
-								<div class="grid grid-cols-2 gap-3">
-									{#each cars as car, i}
-										<button
-											class="cursor-pointer group flex flex-col rounded-xl border-2 transition-all hover:scale-[1.02] hover:shadow-lg {selectedCar.model ===
-											car.model
-												? 'border-yellow-400 bg-white/10 shadow-2xl shadow-yellow-400/20'
-												: 'border-white/20 bg-black/30 hover:border-white/40'}"
-											onclick={() => (selectedCar = car)}
-										>
-											<div class="relative w-full h-36 overflow-hidden rounded-xl">
-												<img
-													src={car.imageURL}
-													alt={car.model}
-													class="w-full h-full object-cover transition-transform group-hover:scale-105"
-												/>
-												<div
-													class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"
-												></div>
-												<div class="absolute bottom-0 left-0 right-0 p-2 space-y-0.5">
-													<div class="font-medium text-white text-sm">{car.model}</div>
-													<div class="text-xs text-gray-300 flex items-center gap-1">
-														<MapPinAltSolid class="h-3 w-3" />
-														{car.address}
-													</div>
+					<div class="flex flex-col space-y-2">
+						<label class="text-sm font-medium text-white/90">Wähle dein Fahrzeug:</label>
+						<div class="relative">
+							<div class="grid grid-cols-2 gap-3">
+								{#each cars as car (car.model)}
+									<button
+										class="cursor-pointer group flex flex-col rounded-xl border-2 transition-all hover:scale-100 hover:shadow-lg {selectedCar.model ===
+										car.model
+											? 'border-yellow-400 bg-white/10 shadow-2xl shadow-yellow-400/20'
+											: 'border-white/20 bg-black/30 hover:border-white/40'}"
+										onclick={() => (selectedCar = car)}
+									>
+										<div class="relative w-full h-36 overflow-hidden rounded-xl">
+											<img
+												src={car.imageURL}
+												alt={car.model}
+												class="w-full h-full object-cover transition-transform group-hover:scale-105"
+											/>
+											<div
+												class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"
+											></div>
+											<div class="absolute bottom-0 left-0 right-0 p-2 space-y-0.5">
+												<div class="font-medium text-white">{car.model}</div>
+												<div class="text-xs text-gray-300 flex items-center justify-center gap-1">
+													<MapPinAltSolid class="h-3 w-3" />
+													{car.address}
 												</div>
 											</div>
-										</button>
-									{/each}
-								</div>
+										</div>
+									</button>
+								{/each}
 							</div>
 						</div>
 
-						<div class="space-y-4">
-							<label class="text-sm font-medium text-white/90">Ziel eingeben:</label>
-							<div class="w-full flex flex-col">
-								<div class="relative">
-									<div
-										class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none"
-									>
-										<SearchOutline class="w-4 h-4 text-gray-400" />
-									</div>
-									<gmp-place-autocomplete
-										id="place-autocomplete-input"
-										bind:this={placeAutocomplete}
-										ongmp-select={onAutocompleteSelect}
-										requestedLanguage="de"
-										requestedRegion="de"
-										locationBias={selectedCar.coordinates}
-										unit-system="metric"
-										class="p-3.5 pl-10 rounded-lg bg-white/95 max-w-full shadow-lg"
-									></gmp-place-autocomplete>
-								</div>
-							</div>
-						</div>
+						<label class="text-sm font-medium text-white/90">Ziel eingeben:</label>
+						<gmp-place-autocomplete
+							id="place-autocomplete-input"
+							bind:this={placeAutocomplete}
+							ongmp-select={onAutocompleteSelect}
+							requestedLanguage="de"
+							requestedRegion="de"
+							locationBias={selectedCar.coordinates}
+							unit-system="metric"
+							class="rounded-lg bg-white shadow-xl"
+						></gmp-place-autocomplete>
 					</div>
 				</AccordionItem>
 			</Accordion>
