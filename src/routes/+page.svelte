@@ -384,10 +384,6 @@
 			.attributions {
 				display: none !important;
 			}
-			input {
-				--tw-text-opacity: 1;
-				background-color: transparent;
-			}
 		`;
 
 		shadow.appendChild(style);
@@ -440,7 +436,7 @@
 	<title>Autoteiler Planer</title>
 </svelte:head>
 
-<div class="h-screen w-full">
+<div class="h-screen w-full dark">
 	<gmp-map-3d
 		id="map"
 		bind:this={map}
@@ -449,7 +445,7 @@
 		mode="HYBRID"
 		class="h-full w-full fixed inset-0"
 	>
-		{#if currentRoute}
+		{#if currentRoute && currentRoute.length > 0}
 			<gmp-polyline-3d
 				coordinates={currentRoute}
 				strokeColor="blue"
@@ -460,7 +456,7 @@
 				drawsOccludedSegments={true}
 			></gmp-polyline-3d>
 		{/if}
-		{#if currentReturnRoute}
+		{#if currentReturnRoute && currentReturnRoute.length > 0}
 			<gmp-polyline-3d
 				coordinates={currentReturnRoute}
 				strokeColor="red"
@@ -528,7 +524,7 @@
 							requestedRegion="de"
 							locationBias={selectedCar.coordinates}
 							unit-system="metric"
-							class="rounded-lg bg-white shadow-xl"
+							class="rounded-lg shadow-xl"
 						></gmp-place-autocomplete>
 					</div>
 				</AccordionItem>
