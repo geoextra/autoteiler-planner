@@ -471,12 +471,17 @@
 
 	<div class="relative z-10 p-4 space-y-4 md:p-0">
 		<div class="md:absolute md:left-4 md:top-4 w-full md:w-[490px]">
-			<Accordion class="bg-black/60 backdrop-blur-lg rounded-2xl" flush>
+			<Accordion
+				class="bg-black/60 backdrop-blur-lg rounded-2xl outline-2 outline-white shadow-2xl"
+				flush
+			>
 				<AccordionItem
 					open
-					class="rounded-2xl border border-white/20 shadow-2xl [&_*]:border-0"
-					headerClass="bg-yellow-400/30 px-5 py-2 rounded-t-2xl text-white font-medium [&_*]:border-0 [&_*]:cursor-pointer [&_*]:shadow-none"
-					contentClass="border-0 p-3"
+					class="rounded-2xl"
+					classes={{
+						button: 'bg-yellow-400/30 px-4 py-3 outline-2 rounded-t-xl',
+						content: 'border-0 p-4'
+					}}
 				>
 					{#snippet header()}
 						<div class="text-white font-medium">Fahrt planen</div>
@@ -536,12 +541,17 @@
 				transition:fly={{ x: 300, duration: 500, opacity: 1 }}
 				class="w-full md:w-[320px] md:absolute md:right-4 md:top-4"
 			>
-				<Accordion class="bg-black/60 backdrop-blur-lg rounded-2xl outline-0" flush>
+				<Accordion
+					class="bg-black/60 backdrop-blur-lg rounded-2xl outline-2 outline-white shadow-2xl"
+					flush
+				>
 					<AccordionItem
 						open
-						class="rounded-2xl border border-white/20 shadow-2xl"
-						headerClass="bg-yellow-400/30 px-5 py-2 rounded-t-2xl text-white font-medium [&_*]:border-0 [&_*]:cursor-pointer [&_*]:shadow-none"
-						contentClass="border-0 p-3"
+						class="rounded-2xl"
+						classes={{
+							button: 'bg-yellow-400/30 px-4 py-3 outline-2 rounded-t-xl',
+							content: 'border-0 p-4'
+						}}
 					>
 						{#snippet header()}
 							<div class="text-white font-medium">Fahrtdetails</div>
