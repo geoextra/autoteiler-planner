@@ -31,11 +31,11 @@
 			coordinates: { lat: 48.0200973, lng: 11.5848989 }
 		},
 		{
-			model: 'Fiat Punto',
-			address: 'Josefstr. 45, Oberhaching',
+			model: 'Skoda Fabia',
+			address: 'Bürgersaal beim Forstner, Kybergstraße 2, Oberhaching',
 			imageURL:
-				'https://www.autoteiler-oberhaching.de/wp-content/uploads/go-x/u/58f1b4dd-cf7a-4f79-89e3-bff9aadcf36d/l160,t0,w480,h360/image.jpg',
-			coordinates: { lat: 48.0138089, lng: 11.5905707 }
+				'https://www.autoteiler-oberhaching.de/wp-content/uploads/go-x/u/bc468627-94bc-46cb-aaa8-81e7f270a95a/l37,t0,w580,h463/image-480x383.jpg',
+			coordinates: { lat: 48.0257354, lng: 11.5950084 }
 		},
 		{
 			model: 'Toyota Aygo X',
