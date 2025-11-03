@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { PUBLIC_GOOGLE_MAPS_API_KEY } from '$env/static/public';
-	import { Loader } from '@googlemaps/js-api-loader';
+	import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 	import { onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { Tween } from 'svelte/motion';
@@ -47,6 +47,9 @@
 	];
 
 	let selectedCar = $state(cars[0]);
+
+	// Map mode state (2D default for performance)
+	let is3D = $state(false);
 
 	// Helper functions
 	function formatDistance(km: number): string {
@@ -146,29 +149,31 @@
 
 	let totalPrice = $derived(kmPrice + timePrice);
 
-	let map: google.maps.maps3d.Map3DElement;
+	// 3D map refs
+	let map3d = $state<google.maps.maps3d.Map3DElement | null>(null);
 	let placeAutocomplete: google.maps.places.PlaceAutocompleteElement;
-	let destinationMarker: google.maps.marker.AdvancedMarkerElement | null = null;
+	let destinationMarker3D: google.maps.marker.AdvancedMarkerElement | null = null;
 
-	let currentRoute: Iterable<google.maps.LatLngLiteral> | null = $state(null);
-	let currentReturnRoute: Iterable<google.maps.LatLngLiteral> | null = $state(null);
+	// 2D map refs (using gmp-map web component)
+	let map2d: google.maps.Map | null = null;
+	let map2dEl = null;
+	let outwardPolyline2D: google.maps.Polyline | null = null;
+	let returnPolyline2D: google.maps.Polyline | null = null;
+
+	// Shared route point type (2D ignores altitude, 3D can use it)
+	type RoutePoint = google.maps.LatLngLiteral & { altitude?: number };
+	let currentRoute: RoutePoint[] | null = $state(null);
+	let currentReturnRoute: RoutePoint[] | null = $state(null);
+
+	let maps3dLoaded = $state(false);
 
 	onMount(async () => {
-		const libraries = ['marker', 'places', 'maps3d'];
-		const loader = new Loader({
-			apiKey: PUBLIC_GOOGLE_MAPS_API_KEY,
-			version: 'beta',
-			language: 'de',
-			region: 'DE',
-			//@ts-expect-error maps3d not yet included in the types
-			libraries
-		});
+		setOptions({ key: PUBLIC_GOOGLE_MAPS_API_KEY, language: 'de', region: 'DE' });
 
-		// import required libraries
-		//@ts-expect-error maps3d not yet included in the types
-		await Promise.all(libraries.map((lib) => loader.importLibrary(lib)));
+		// Import required libraries for 2D map
+		await Promise.all([importLibrary('maps'), importLibrary('marker'), importLibrary('places')]);
 
-		initMap();
+		await initMap2D();
 	});
 
 	// Watch for car selection changes
@@ -178,16 +183,53 @@
 		}
 	});
 
-	function initMap() {
+	// Watch for map mode changes and (lazy) init 3D
+	$effect(async () => {
+		if (is3D && !maps3dLoaded) {
+			// Load maps3d library only when needed
+			await importLibrary('maps3d');
+			maps3dLoaded = true;
+			await initMap3D();
+		}
+		// Redraw route in the active mode if we already have a destination
+		if (currentDestination) {
+			calculateAndDisplayRoute(currentDestination);
+		}
+	});
+
+	// Ensure 2D map initializes when switching back from 3D
+	$effect(() => {
+		if (!is3D && map2dEl && !map2d) {
+			initMap2D();
+		}
+	});
+
+	// If the 3D DOM element binds after libs loaded, initialize markers and events
+	$effect(() => {
+		if (is3D && maps3dLoaded && map3d) {
+			initMap3D();
+		}
+	});
+
+	async function initMap3D() {
+		if (!map3d) return;
+
+		// Import marker library if not already loaded
+		const { PinElement } = await importLibrary('marker');
+		// Import maps3d library if not already loaded
+		const { Marker3DInteractiveElement } = await importLibrary('maps3d');
+
+		// Add car markers
 		cars.forEach((car) => {
-			const carPinElement = new google.maps.marker.PinElement({
+			const carPinElement = new PinElement({
 				background: 'white',
 				borderColor: '#fff200',
-				glyph: '🚖',
+				glyphText: '🚖',
 				scale: 1.5
 			});
+
 			//@ts-expect-error maps3d not yet included in the types
-			const carMarker = new google.maps.maps3d.Marker3DInteractiveElement({
+			const carMarker = new Marker3DInteractiveElement({
 				position: { lat: car.coordinates.lat, lng: car.coordinates.lng, altitude: 25 },
 				altitudeMode: 'RELATIVE_TO_MESH',
 				extruded: true,
@@ -195,25 +237,14 @@
 			});
 			carMarker.append(carPinElement);
 			carMarker.addEventListener('gmp-click', (event: google.maps.maps3d.LocationClickEvent) => {
-				const originalCamera = {
-					center: { lat: car.coordinates.lat, lng: car.coordinates.lng, altitude: 100 },
-					altitudeMode: 'RELATIVE_TO_MESH',
-					range: 700,
-					tilt: 74,
-					heading: 0
-				};
-				/* map.flyCameraAround({
-					camera: originalCamera,
-					durationMillis: 50000,
-					rounds: 1
-				}); */
 				selectedCar = car;
 			});
 
-			map.append(carMarker);
+			map3d.append(carMarker);
 		});
 
-		map.addEventListener('gmp-click', async (event: any) => {
+		// Add click listener for destination selection
+		map3d.addEventListener('gmp-click', async (event) => {
 			event.preventDefault();
 			if (event.position) {
 				const clickedPosition = new google.maps.LatLng(event.position.lat, event.position.lng);
@@ -223,9 +254,35 @@
 		});
 	}
 
+	async function initMap2D() {
+		if (!map2dEl) return;
+
+		// Wait for the gmp-map web component to be ready
+		await customElements.whenDefined('gmp-map');
+
+		// Get the inner Map instance from the web component
+		map2d = (map2dEl as any).innerMap || (map2dEl as any).map || null;
+		if (!map2d) {
+			console.error('Failed to get Map instance from gmp-map element');
+			return;
+		}
+
+		// Add click listener to set destination
+		map2d.addListener('click', (e: google.maps.MapMouseEvent) => {
+			if (!e.latLng) return;
+			calculateAndDisplayRoute(e.latLng);
+			currentDestination = e.latLng;
+		});
+	}
+
 	async function calculateAndDisplayRoute(destination: google.maps.LatLng) {
-		const directionsService = new google.maps.DirectionsService();
-		const geocoder = new google.maps.Geocoder();
+		// Import routes library for directions
+		const { DirectionsService } = await importLibrary('routes');
+		// Import geocoding library
+		const { Geocoder } = await importLibrary('geocoding');
+
+		const directionsService = new DirectionsService();
+		const geocoder = new Geocoder();
 
 		// Get place name from coordinates
 		try {
@@ -237,28 +294,36 @@
 			console.error('Geocoding failed:', error);
 		}
 
-		// Remove existing destination marker if it exists
-		if (destinationMarker && map.contains(destinationMarker)) {
-			destinationMarker.remove();
-			destinationMarker = null;
-		}
+		// Remove and create destination marker depending on mode
+		if (is3D) {
+			// Import required libraries for 3D marker
+			const { PinElement } = await importLibrary('marker');
+			const { Marker3DInteractiveElement } = await importLibrary('maps3d');
 
-		// Create new destination marker
-		const destinationPinElement = new google.maps.marker.PinElement({
-			background: 'white',
-			borderColor: 'red',
-			glyph: '📍',
-			scale: 1.5
-		});
-		//@ts-expect-error maps3d not yet included in the types
-		const newMarker = new google.maps.maps3d.Marker3DInteractiveElement({
-			position: destination,
-			extruded: true,
-			label: 'Zielort'
-		});
-		newMarker.append(destinationPinElement);
-		map.append(newMarker);
-		destinationMarker = newMarker;
+			if (destinationMarker3D && map3d.contains(destinationMarker3D)) {
+				destinationMarker3D.remove();
+				destinationMarker3D = null;
+			}
+
+			const destinationPinElement = new PinElement({
+				background: 'white',
+				borderColor: 'red',
+				glyphText: '📍',
+				scale: 1.5
+			});
+
+			//@ts-expect-error maps3d not yet included in the types
+			const newMarker = new Marker3DInteractiveElement({
+				position: destination,
+				extruded: true,
+				label: 'Zielort'
+			});
+			newMarker.append(destinationPinElement);
+			map3d.append(newMarker);
+			destinationMarker3D = newMarker as unknown as google.maps.marker.AdvancedMarkerElement;
+		} else {
+			// Destination marker in 2D is rendered declaratively in the template based on currentDestination
+		}
 
 		// Get departure date based on start time
 		const getDepartureDate = () => {
@@ -312,49 +377,77 @@
 
 			detailsVisible = true;
 
-			currentRoute = outwardPoints.map((point) => ({
-				lat: point.lat(),
-				lng: point.lng()
-			}));
+			// Draw route overlays depending on mode
+			if (is3D) {
+				currentRoute = outwardPoints.map((point) => ({
+					lat: point.lat(),
+					lng: point.lng()
+				}));
 
-			currentReturnRoute = returnPoints.map((point) => ({
-				lat: point.lat(),
-				lng: point.lng(),
-				altitude: 0.1
-			}));
+				currentReturnRoute = returnPoints.map((point) => ({
+					lat: point.lat(),
+					lng: point.lng(),
+					altitude: 0.1
+				}));
 
-			const bounds: google.maps.LatLngBounds = route.bounds;
-
-			// Calculate center and range for the camera
-			const center = bounds.getCenter();
-			const range = Math.max(
-				google.maps.geometry.spherical.computeDistanceBetween(
-					bounds.getNorthEast(),
-					bounds.getCenter()
-				) * 2,
-				2000 // Minimum range in meters
-			);
-			//@ts-expect-error maps3d not yet included in the types
-			map.flyCameraTo({
-				endCamera: {
-					center: {
-						lat: center.lat(),
-						lng: center.lng(),
-						altitude: range * 0.9
+				const bounds: google.maps.LatLngBounds = route.bounds;
+				const center = bounds.getCenter();
+				const range = Math.max(
+					google.maps.geometry.spherical.computeDistanceBetween(
+						bounds.getNorthEast(),
+						bounds.getCenter()
+					) * 2,
+					2000
+				);
+				map3d.flyCameraTo({
+					endCamera: {
+						center: {
+							lat: center.lat(),
+							lng: center.lng(),
+							altitude: range * 0.9
+						},
+						range: range,
+						tilt: 0,
+						heading: 0
 					},
-					range: range,
-					tilt: 0,
-					heading: 0
-				},
-				durationMillis: 1000
-			});
+					durationMillis: 1000
+				});
+			} else {
+				// Import maps library for Polyline
+				const { Polyline } = await importLibrary('maps');
+
+				// Clean previous polylines
+				outwardPolyline2D?.setMap(null);
+				returnPolyline2D?.setMap(null);
+
+				outwardPolyline2D = new Polyline({
+					map: map2d!,
+					path: outwardPoints,
+					strokeColor: 'blue',
+					strokeWeight: 5,
+					strokeOpacity: 0.9
+				});
+				returnPolyline2D = new Polyline({
+					map: map2d!,
+					path: returnPoints,
+					strokeColor: 'red',
+					strokeWeight: 5,
+					strokeOpacity: 0.9
+				});
+
+				// Fit bounds on 2D map
+				const bounds = route.bounds;
+				if (bounds && map2d) {
+					map2d.fitBounds(bounds, 50);
+				}
+			}
 		} catch (error) {
 			console.error('Route calculation failed:', error);
 			throw error;
 		}
 	}
 
-	async function onAutocompleteSelect({ placePrediction }: { placePrediction: any }) {
+	async function onAutocompleteSelect({ placePrediction }: { placePrediction }) {
 		const place = placePrediction.toPlace();
 		await place.fetchFields({ fields: ['displayName', 'location'] });
 
@@ -437,40 +530,63 @@
 </svelte:head>
 
 <div class="h-screen w-full dark">
-	<gmp-map-3d
-		id="map"
-		bind:this={map}
-		center={{ lat: 48.019, lng: 11.583, altitude: 3500 }}
-		tilt={0}
-		mode="HYBRID"
-		class="h-full w-full fixed inset-0"
-	>
-		{#if currentRoute && currentRoute.length > 0}
-			<gmp-polyline-3d
-				coordinates={currentRoute}
-				strokeColor="blue"
-				outerColor="white"
-				strokeWidth={10}
-				outerWidth={0.4}
-				altitudeMode="CLAMP_TO_GROUND"
-				drawsOccludedSegments={true}
-			></gmp-polyline-3d>
-		{/if}
-		{#if currentReturnRoute && currentReturnRoute.length > 0}
-			<gmp-polyline-3d
-				coordinates={currentReturnRoute}
-				strokeColor="red"
-				outerColor="white"
-				strokeWidth={10}
-				outerWidth={0.4}
-				altitudeMode="CLAMP_TO_GROUND"
-				drawsOccludedSegments={true}
-			></gmp-polyline-3d>
-		{/if}
-	</gmp-map-3d>
+	{#if is3D}
+		<gmp-map-3d
+			id="map3d"
+			bind:this={map3d}
+			center={{ lat: 48.019, lng: 11.583, altitude: 3500 }}
+			tilt={0}
+			mode="HYBRID"
+			class="h-full w-full fixed inset-0 z-0"
+		>
+			{#if currentRoute && currentRoute.length > 0}
+				<gmp-polyline-3d
+					path={currentRoute}
+					strokeColor="blue"
+					outerColor="white"
+					strokeWidth={10}
+					outerWidth={0.4}
+					altitudeMode="CLAMP_TO_GROUND"
+					drawsOccludedSegments={true}
+				></gmp-polyline-3d>
+			{/if}
+			{#if currentReturnRoute && currentReturnRoute.length > 0}
+				<gmp-polyline-3d
+					path={currentReturnRoute}
+					strokeColor="red"
+					outerColor="white"
+					strokeWidth={10}
+					outerWidth={0.4}
+					altitudeMode="CLAMP_TO_GROUND"
+					drawsOccludedSegments={true}
+				></gmp-polyline-3d>
+			{/if}
+		</gmp-map-3d>
+	{:else}
+		<gmp-map
+			id="map2d"
+			bind:this={map2dEl}
+			map-id="DEMO_MAP_ID"
+			center={{ lat: 48.019, lng: 11.583 }}
+			zoom={13}
+			class="h-full w-full fixed inset-0 z-0"
+		>
+			{#each cars as car (car.model)}
+				<gmp-advanced-marker
+					gmp-clickable
+					position={car.coordinates}
+					title={car.model}
+					ongmp-click={() => (selectedCar = car)}
+				/>
+			{/each}
+			{#if currentDestination}
+				<gmp-advanced-marker gmp-clickable position={currentDestination} title="Zielort" />
+			{/if}
+		</gmp-map>
+	{/if}
 
-	<div class="relative z-10 p-4 space-y-4 md:p-0">
-		<div class="md:absolute md:left-4 md:top-4 w-full md:w-[490px]">
+	<div class="fixed inset-0 z-10 p-4 space-y-4 md:p-0 pointer-events-none">
+		<div class="md:absolute md:left-4 md:top-4 w-full md:w-[490px] pointer-events-auto">
 			<Accordion
 				class="bg-black/60 backdrop-blur-lg rounded-2xl outline-2 outline-white shadow-2xl"
 				flush
@@ -487,7 +603,16 @@
 						<div class="text-white font-medium">Fahrt planen</div>
 					{/snippet}
 					<div class="flex flex-col space-y-2">
-						<label class="text-sm font-medium text-white/90">Wähle dein Fahrzeug:</label>
+						<div class="flex justify-end">
+							<button
+								class="text-xs px-2 py-1 rounded bg-black/40 border border-white/20 text-white hover:bg-black/60"
+								onclick={() => (is3D = !is3D)}
+								aria-label="Kartenmodus umschalten"
+							>
+								{is3D ? '3D aktiviert' : '2D (empfohlen)'}
+							</button>
+						</div>
+						<div class="text-sm font-medium text-white/90">Wähle dein Fahrzeug:</div>
 						<div class="relative">
 							<div class="grid grid-cols-2 gap-3">
 								{#each cars as car (car.model)}
@@ -520,7 +645,7 @@
 							</div>
 						</div>
 
-						<label class="text-sm font-medium text-white/90">Ziel eingeben:</label>
+						<div class="text-sm font-medium text-white/90">Ziel eingeben:</div>
 						<gmp-place-autocomplete
 							id="place-autocomplete-input"
 							bind:this={placeAutocomplete}
@@ -539,7 +664,7 @@
 		{#if detailsVisible}
 			<div
 				transition:fly={{ x: 300, duration: 500, opacity: 1 }}
-				class="w-full md:w-[320px] md:absolute md:right-4 md:top-4"
+				class="w-full md:w-[320px] md:absolute md:right-4 md:top-4 pointer-events-auto"
 			>
 				<Accordion
 					class="bg-black/60 backdrop-blur-lg rounded-2xl outline-2 outline-white shadow-2xl"
