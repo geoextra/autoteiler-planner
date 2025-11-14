@@ -20,28 +20,28 @@
 			model: 'Dacia Jogger',
 			address: 'Hinteres Gleißental 19, Oberhaching',
 			imageURL:
-				'https://www.autoteiler-oberhaching.de/wp-content/uploads/go-x/u/5b971129-3306-45bb-8827-11d926a8945a/l0,t0,w1280,h960/image-683x512.jpg',
+				'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/08/image-9.avif',
 			coordinates: { lat: 48.0148737, lng: 11.5886307 }
 		},
 		{
 			model: 'Toyota Proace City',
 			address: 'Hubertusstr. 11, Oberhaching',
 			imageURL:
-				'https://www.autoteiler-oberhaching.de/wp-content/uploads/go-x/u/03241f99-6f5c-4709-978c-66d34f8fd594/l0,t0,w600,h450/image.jpg',
+				'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/08/image-4.avif',
 			coordinates: { lat: 48.0200973, lng: 11.5848989 }
 		},
 		{
 			model: 'Skoda Fabia',
 			address: 'Bürgersaal beim Forstner, Kybergstraße 2, Oberhaching',
 			imageURL:
-				'https://www.autoteiler-oberhaching.de/wp-content/uploads/go-x/u/bc468627-94bc-46cb-aaa8-81e7f270a95a/l37,t0,w580,h463/image-480x383.jpg',
+				'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/09/image-12.avif',
 			coordinates: { lat: 48.0257354, lng: 11.5950084 }
 		},
 		{
 			model: 'Toyota Aygo X',
 			address: 'Laufzorner Str. 11, Oberhaching',
 			imageURL:
-				'https://www.autoteiler-oberhaching.de/wp-content/uploads/go-x/u/45205f0e-6a98-44cf-9741-2091dce570b6/l23,t197,w545,h409/image.jpg',
+				'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/08/image-6.avif',
 			coordinates: { lat: 48.0221586, lng: 11.5768658 }
 		}
 	];
