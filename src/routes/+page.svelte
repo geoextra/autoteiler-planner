@@ -6,43 +6,70 @@
 	import { Tween } from 'svelte/motion';
 	import { cubicOut } from 'svelte/easing';
 	import { MapPinAltSolid } from 'flowbite-svelte-icons';
-	import { AccordionItem, Accordion } from 'flowbite-svelte';
+	import { AccordionItem, Accordion, Badge, Toggle, Avatar } from 'flowbite-svelte';
+
+	enum CarClass {
+		Small = 'Klein',
+		Compact = 'Kompakt',
+		Medium = 'Mittel'
+	}
+
+	interface CarClassPricing {
+		upTo200km: number;
+		above200km: number;
+	}
+
+	const carClassPricing: Record<CarClass, CarClassPricing> = {
+		[CarClass.Small]: {
+			upTo200km: 0.3,
+			above200km: 0.2
+		},
+		[CarClass.Compact]: {
+			upTo200km: 0.35,
+			above200km: 0.25
+		},
+		[CarClass.Medium]: {
+			upTo200km: 0.4,
+			above200km: 0.3
+		}
+	};
 
 	interface Car {
 		model: string;
 		address: string;
 		imageURL: string;
 		coordinates: google.maps.LatLngLiteral;
+		carClass: CarClass;
 	}
 
 	const cars: Car[] = [
 		{
 			model: 'Dacia Jogger',
 			address: 'Hinteres Gleißental 19, Oberhaching',
-			imageURL:
-				'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/08/image-9.avif',
-			coordinates: { lat: 48.0148737, lng: 11.5886307 }
+			imageURL: 'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/08/image-9.avif',
+			coordinates: { lat: 48.0148737, lng: 11.5886307 },
+			carClass: CarClass.Medium
 		},
 		{
 			model: 'Toyota Proace City',
 			address: 'Hubertusstr. 11, Oberhaching',
-			imageURL:
-				'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/08/image-4.avif',
-			coordinates: { lat: 48.0200973, lng: 11.5848989 }
+			imageURL: 'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/08/image-4.avif',
+			coordinates: { lat: 48.0200973, lng: 11.5848989 },
+			carClass: CarClass.Medium
 		},
 		{
 			model: 'Skoda Fabia',
 			address: 'Bürgersaal beim Forstner, Kybergstraße 2, Oberhaching',
-			imageURL:
-				'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/09/image-12.avif',
-			coordinates: { lat: 48.0257354, lng: 11.5950084 }
+			imageURL: 'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/09/image-12.avif',
+			coordinates: { lat: 48.0257354, lng: 11.5950084 },
+			carClass: CarClass.Compact
 		},
 		{
 			model: 'Toyota Aygo X',
 			address: 'Laufzorner Str. 11, Oberhaching',
-			imageURL:
-				'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/08/image-6.avif',
-			coordinates: { lat: 48.0221586, lng: 11.5768658 }
+			imageURL: 'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/08/image-6.avif',
+			coordinates: { lat: 48.0221586, lng: 11.5768658 },
+			carClass: CarClass.Small
 		}
 	];
 
@@ -143,7 +170,12 @@
 	let nightHours = $derived(Math.ceil(totalHours - dayHours));
 
 	// Derived values for pricing calculations
-	let kmPrice = $derived(Math.min(totalKm, 200) * 0.35 + Math.max(0, totalKm - 200) * 0.25);
+	let kmPrice = $derived.by(() => {
+		const pricing = carClassPricing[selectedCar.carClass];
+		return (
+			Math.min(totalKm, 200) * pricing.upTo200km + Math.max(0, totalKm - 200) * pricing.above200km
+		);
+	});
 
 	let timePrice = $derived(dayHours * 1.0 + nightHours * 0.2);
 
@@ -167,9 +199,10 @@
 
 	let maps3dLoaded = $state(false);
 
-	onMount(async () => {
-		setOptions({ key: PUBLIC_GOOGLE_MAPS_API_KEY, language: 'de', region: 'DE' });
+	// Set Google Maps options once at module initialization
+	setOptions({ key: PUBLIC_GOOGLE_MAPS_API_KEY, language: 'de', region: 'DE' });
 
+	onMount(async () => {
 		// Import required libraries for 2D map
 		await Promise.all([importLibrary('maps'), importLibrary('marker'), importLibrary('places')]);
 
@@ -577,10 +610,18 @@
 					position={car.coordinates}
 					title={car.model}
 					ongmp-click={() => (selectedCar = car)}
-				/>
+				>
+					<Avatar
+						src={car.imageURL}
+						size="md"
+						border
+						class={car.model == selectedCar.model ? 'ring-yellow-400 dark:ring-yellow-300' : ''}
+					></Avatar>
+				</gmp-advanced-marker>
 			{/each}
 			{#if currentDestination}
-				<gmp-advanced-marker gmp-clickable position={currentDestination} title="Zielort" />
+				<gmp-advanced-marker gmp-clickable position={currentDestination} title="Zielort">
+				</gmp-advanced-marker>
 			{/if}
 		</gmp-map>
 	{/if}
@@ -603,15 +644,6 @@
 						<div class="text-white font-medium">Fahrt planen</div>
 					{/snippet}
 					<div class="flex flex-col space-y-2">
-						<div class="flex justify-end">
-							<button
-								class="text-xs px-2 py-1 rounded bg-black/40 border border-white/20 text-white hover:bg-black/60"
-								onclick={() => (is3D = !is3D)}
-								aria-label="Kartenmodus umschalten"
-							>
-								{is3D ? '3D aktiviert' : '2D (empfohlen)'}
-							</button>
-						</div>
 						<div class="text-sm font-medium text-white/90">Wähle dein Fahrzeug:</div>
 						<div class="relative">
 							<div class="grid grid-cols-2 gap-3">
@@ -632,6 +664,14 @@
 											<div
 												class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"
 											></div>
+											<div class="absolute top-2 right-2">
+												<Badge
+													color="dark"
+													class="bg-black/60 backdrop-blur-sm text-white border border-white/20"
+												>
+													{car.carClass}
+												</Badge>
+											</div>
 											<div class="absolute bottom-0 left-0 right-0 p-2 space-y-0.5">
 												<div class="font-medium text-white">{car.model}</div>
 												<div class="text-xs text-gray-300 flex items-center justify-center gap-1">
@@ -656,6 +696,12 @@
 							unit-system="metric"
 							class="rounded-lg shadow-xl"
 						></gmp-place-autocomplete>
+					</div>
+
+					<div class="flex justify-end items-center gap-2 mt-2">
+						<Badge color="dark" class="text-sm text-white/90">2D</Badge>
+						<Toggle bind:checked={is3D} />
+						<Badge color="dark" class="text-sm text-white/90 -ml-3">3D</Badge>
 					</div>
 				</AccordionItem>
 			</Accordion>
