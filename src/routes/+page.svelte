@@ -47,29 +47,37 @@
 			model: 'Dacia Jogger',
 			address: 'Hinteres Gleißental 19, Oberhaching',
 			imageURL: 'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/08/image-9.avif',
-			coordinates: { lat: 48.0148737, lng: 11.5886307 },
+			coordinates: { lat: 48.014879, lng: 11.5911 },
 			carClass: CarClass.Medium
 		},
 		{
 			model: 'Toyota Proace City',
 			address: 'Hubertusstr. 11, Oberhaching',
 			imageURL: 'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/08/image-4.avif',
-			coordinates: { lat: 48.0200973, lng: 11.5848989 },
+			coordinates: { lat: 48.020226, lng: 11.5875 },
 			carClass: CarClass.Medium
 		},
 		{
 			model: 'Skoda Fabia',
 			address: 'Bürgersaal beim Forstner, Kybergstraße 2, Oberhaching',
 			imageURL: 'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/09/image-12.avif',
-			coordinates: { lat: 48.0257354, lng: 11.5950084 },
+			coordinates: { lat: 48.025751, lng: 11.594635 },
 			carClass: CarClass.Compact
 		},
 		{
 			model: 'Toyota Aygo X',
 			address: 'Laufzorner Str. 11, Oberhaching',
 			imageURL: 'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/08/image-6.avif',
-			coordinates: { lat: 48.0221586, lng: 11.5768658 },
+			coordinates: { lat: 48.022371, lng: 11.579121 },
 			carClass: CarClass.Small
+		},
+		{
+			model: 'Dacia Lodgy',
+			address: 'Ringstraße 129, Oberhaching',
+			imageURL:
+				'https://www.autoteiler-oberhaching.de/wp-content/uploads/2025/12/signal-2025-12-04-09-25-21-557-768x576.avif',
+			coordinates: { lat: 48.021462, lng: 11.572164 },
+			carClass: CarClass.Medium
 		}
 	];
 
