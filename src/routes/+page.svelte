@@ -5,8 +5,17 @@
 	import { fly } from 'svelte/transition';
 	import { Tween } from 'svelte/motion';
 	import { cubicOut } from 'svelte/easing';
-	import { MapPinAltSolid } from 'flowbite-svelte-icons';
-	import { AccordionItem, Accordion, Badge, Toggle, Avatar } from 'flowbite-svelte';
+	import { MapPinAltSolid, ChevronDownOutline } from 'flowbite-svelte-icons';
+	import {
+		AccordionItem,
+		Accordion,
+		Badge,
+		Toggle,
+		Avatar,
+		Button,
+		Dropdown,
+		DropdownItem
+	} from 'flowbite-svelte';
 
 	enum CarClass {
 		Small = 'Klein',
@@ -82,6 +91,7 @@
 	];
 
 	let selectedCar = $state(cars[0]);
+	let isDropdownOpen = $state(false);
 
 	// Map mode state (2D default for performance)
 	let is3D = $state(false);
@@ -653,8 +663,66 @@
 					{/snippet}
 					<div class="flex flex-col space-y-2">
 						<div class="text-sm font-medium text-white/90">Wähle dein Fahrzeug:</div>
-						<div class="relative">
-							<div class="grid grid-cols-2 gap-3">
+
+						<!-- Mobile: Dropdown -->
+						<div class="md:hidden">
+							<Button
+								class="w-full bg-black/30 border-white/20 hover:bg-white/10 text-white cursor-pointer"
+							>
+								{selectedCar.model}
+								<Badge
+									color="dark"
+									class="bg-black/60 backdrop-blur-sm text-white border border-white/20 text-xs mx-2"
+								>
+									{selectedCar.carClass}
+								</Badge>
+								<ChevronDownOutline class="ms-2 h-4 w-4" />
+							</Button>
+							<Dropdown
+								bind:isOpen={isDropdownOpen}
+								class="w-[95%] max-h-96 overflow-y-auto py-1 bg-gray-800 border-white/20"
+							>
+								{#each cars as car (car.model)}
+									<DropdownItem
+										class="flex items-center gap-3 text-base hover:bg-white/10 cursor-pointer {selectedCar.model ===
+										car.model
+											? 'bg-yellow-400/20'
+											: ''}"
+										onclick={() => {
+											selectedCar = car;
+											isDropdownOpen = false;
+										}}
+									>
+										<Avatar
+											src={car.imageURL}
+											size="sm"
+											class="ring-2 {selectedCar.model === car.model
+												? 'ring-yellow-400'
+												: 'ring-white/20'}"
+										/>
+										<div class="flex flex-col">
+											<span class="font-semibold text-white">{car.model}</span>
+											<div class="flex items-center gap-2 text-xs text-gray-300">
+												<Badge
+													color="dark"
+													class="bg-black/60 backdrop-blur-sm text-white border border-white/20 text-xs"
+												>
+													{car.carClass}
+												</Badge>
+												<span class="flex items-center gap-1">
+													<MapPinAltSolid class="h-3 w-3" />
+													{car.address}
+												</span>
+											</div>
+										</div>
+									</DropdownItem>
+								{/each}
+							</Dropdown>
+						</div>
+
+						<!-- Desktop: Cards -->
+						<div class="relative hidden md:block">
+							<div class="grid grid-cols-2 gap-2">
 								{#each cars as car (car.model)}
 									<button
 										class="cursor-pointer group flex flex-col rounded-xl border-2 transition-all hover:scale-100 hover:shadow-lg {selectedCar.model ===
