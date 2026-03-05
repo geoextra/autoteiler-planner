@@ -327,12 +327,12 @@
 	}
 
 	async function calculateAndDisplayRoute(destination: google.maps.LatLng) {
-		// Import routes library for directions
-		const { DirectionsService } = await importLibrary('routes');
+		// Import routes library for routing
+		const { Route, PolylineQuality, RoutingPreference, TravelMode, ReferenceRoute } =
+			await importLibrary('routes');
 		// Import geocoding library
 		const { Geocoder } = await importLibrary('geocoding');
 
-		const directionsService = new DirectionsService();
 		const geocoder = new Geocoder();
 
 		// Get place name from coordinates
@@ -391,19 +391,21 @@
 				selectedCar.coordinates.lat,
 				selectedCar.coordinates.lng
 			);
-			const response = await directionsService.route({
+			const response = await Route.computeRoutes({
 				origin: origin,
 				destination: origin,
-				waypoints: [
+				intermediates: [
 					{
 						location: destination,
-						stopover: true
+						vehicleStopover: true
 					}
 				],
-				travelMode: google.maps.TravelMode.DRIVING,
-				drivingOptions: {
-					departureTime: getDepartureDate()
-				}
+				// departureTime: getDepartureDate(),
+				fields: ['durationMillis', 'distanceMeters', 'legs', 'polylineDetails', 'path', 'viewport'],
+				travelMode: TravelMode.DRIVING,
+				// polylineQuality: PolylineQuality.HIGH_QUALITY,
+				routingPreference: RoutingPreference.TRAFFIC_UNAWARE,
+				requestedReferenceRoutes: [ReferenceRoute.SHORTER_DISTANCE]
 			});
 
 			const route = response.routes[0];
@@ -413,35 +415,32 @@
 
 			// First leg is outward journey
 			const outwardLeg = route.legs[0];
-			const outwardPoints = route.overview_path.slice(
-				0,
-				Math.floor(route.overview_path.length / 2)
-			);
-			routeDistance = (outwardLeg.distance?.value ?? 0) / 1000;
-			routeDuration = (outwardLeg.duration?.value ?? 0) / 60;
+			const outwardPoints = route.path.slice(0, Math.floor(route.path.length / 2));
+			routeDistance = (outwardLeg.distanceMeters ?? 0) / 1000;
+			routeDuration = (outwardLeg.durationMillis ?? 0) / 1000 / 60;
 
 			// Second leg is return journey
 			const returnLeg = route.legs[1];
-			const returnPoints = route.overview_path.slice(Math.floor(route.overview_path.length / 2));
-			returnRouteDistance = (returnLeg.distance?.value ?? 0) / 1000;
-			returnRouteDuration = (returnLeg.duration?.value ?? 0) / 60;
+			const returnPoints = route.path.slice(Math.floor(route.path.length / 2));
+			returnRouteDistance = (returnLeg.distanceMeters ?? 0) / 1000;
+			returnRouteDuration = (returnLeg.durationMillis ?? 0) / 1000 / 60;
 
 			detailsVisible = true;
 
 			// Draw route overlays depending on mode
 			if (is3D) {
 				currentRoute = outwardPoints.map((point) => ({
-					lat: point.lat(),
-					lng: point.lng()
+					lat: point.lat,
+					lng: point.lng
 				}));
 
 				currentReturnRoute = returnPoints.map((point) => ({
-					lat: point.lat(),
-					lng: point.lng(),
+					lat: point.lat,
+					lng: point.lng,
 					altitude: 0.1
 				}));
 
-				const bounds: google.maps.LatLngBounds = route.bounds;
+				const bounds: google.maps.LatLngBounds = route.viewport;
 				const center = bounds.getCenter();
 				const range = Math.max(
 					google.maps.geometry.spherical.computeDistanceBetween(
@@ -455,7 +454,7 @@
 						center: {
 							lat: center.lat(),
 							lng: center.lng(),
-							altitude: range * 0.9
+							altitude: range
 						},
 						range: range,
 						tilt: 0,
@@ -487,7 +486,7 @@
 				});
 
 				// Fit bounds on 2D map
-				const bounds = route.bounds;
+				const bounds = route.viewport;
 				if (bounds && map2d) {
 					map2d.fitBounds(bounds, 50);
 				}
@@ -502,7 +501,7 @@
 		const place = placePrediction.toPlace();
 		await place.fetchFields({ fields: ['displayName', 'location'] });
 
-		const placeLocation = new google.maps.LatLng(place.location.lat(), place.location.lng());
+		const placeLocation = new google.maps.LatLng(place.location.lat, place.location.lng);
 		calculateAndDisplayRoute(placeLocation);
 		currentDestination = placeLocation;
 	}
