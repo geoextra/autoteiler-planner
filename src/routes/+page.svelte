@@ -501,9 +501,8 @@
 		const place = placePrediction.toPlace();
 		await place.fetchFields({ fields: ['displayName', 'location'] });
 
-		const placeLocation = new google.maps.LatLng(place.location.lat, place.location.lng);
-		calculateAndDisplayRoute(placeLocation);
-		currentDestination = placeLocation;
+		calculateAndDisplayRoute(place.location);
+		currentDestination = place.location;
 	}
 
 	function applyAutocompleteShadowStyles(element: Element) {
