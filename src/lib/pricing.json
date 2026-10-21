@@ -1,0 +1,5 @@
+{
+	"Klein": { "upTo200km": 0.3, "above200km": 0.2 },
+	"Kompakt": { "upTo200km": 0.35, "above200km": 0.25 },
+	"Mittel": { "upTo200km": 0.4, "above200km": 0.3 }
+}
