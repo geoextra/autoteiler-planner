@@ -14,9 +14,6 @@ export default defineConfig({
 		tailwindcss(),
 		sveltekit()
 	],
-	ssr: {
-		noExternal: ['@googlemaps/js-api-loader']
-	},
 	build: {
 		assetsInlineLimit: Infinity
 	}

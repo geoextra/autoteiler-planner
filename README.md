@@ -26,6 +26,8 @@ You can preview the production build with `npm run preview`.
 ## Embedding the planner elsewhere
 
 `src/lib/Planner.svelte` is a self-contained Svelte 5 component. It takes `cars` (see `src/lib/cars.json`
-for the shape) and `apiKey` (Google Maps browser key) as props and fills its parent element, so give that
-element a height. Prices per car class are configured in `src/lib/pricing.json`. The route in `src/routes`
+for the shape) and `accessToken` (a public Mapbox token, `pk.…`) as props and fills its parent element, so
+give that element a height. The map is Mapbox GL JS with the Standard style; places are found with the
+Search Box component and routes come from the Directions API, so the token needs those scopes (the default
+public scopes suffice). Set `PUBLIC_MAPBOX_ACCESS_TOKEN` in `.env` to run the standalone app. Prices per car class are configured in `src/lib/pricing.json`. The route in `src/routes`
 is a thin page around it; the AUTOteiler website renders the same component as an Astro island.
