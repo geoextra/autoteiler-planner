@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { PUBLIC_GOOGLE_MAPS_API_KEY } from '$env/static/public';
+	import { PUBLIC_MAPBOX_ACCESS_TOKEN } from '$env/static/public';
 	import Planner from '$lib/Planner.svelte';
 </script>
 
@@ -8,5 +8,5 @@
 </svelte:head>
 
 <div class="h-screen w-full">
-	<Planner apiKey={PUBLIC_GOOGLE_MAPS_API_KEY} />
+	<Planner accessToken={PUBLIC_MAPBOX_ACCESS_TOKEN} />
 </div>
