@@ -2,7 +2,7 @@
 	import mapboxgl from 'mapbox-gl';
 	import 'mapbox-gl/dist/mapbox-gl.css';
 	import { MapboxSearchBox } from '@mapbox/search-js-web';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import type { Attachment } from 'svelte/attachments';
 	import defaultCars from './cars.json';
 	import pricing from './pricing.json';
@@ -15,7 +15,6 @@
 		AccordionItem,
 		Accordion,
 		Badge,
-		Toggle,
 		Avatar,
 		Button,
 		Dropdown,
@@ -34,7 +33,7 @@
 	let selectedCar = $state(cars[0]);
 	let isDropdownOpen = $state(false);
 
-	// Map mode: flat by default, tilted with 3D buildings and terrain on demand
+	// Map mode: flat by default, tilted with 3D buildings on demand
 	let is3D = $state(false);
 
 	// Helper functions
@@ -145,6 +144,8 @@
 	let map = $state<mapboxgl.Map | null>(null); // set once the style has loaded
 	let destinationMarker: mapboxgl.Marker | null = null;
 	let searchBox: MapboxSearchBox | null = null;
+	let button3D: HTMLButtonElement | null = null;
+	let routeRequest = 0; // serial of the latest route request; older responses are dropped
 
 	function toLngLat(car: Car): [number, number] {
 		return [car.coordinates.lng, car.coordinates.lat];
@@ -161,6 +162,7 @@
 			config: { basemap: { show3dObjects: false } }
 		});
 		m.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'bottom-right');
+		m.addControl(new ThreeDControl(), 'bottom-right');
 		m.on('style.load', () => {
 			for (const [id, color] of [
 				[OUTWARD, '#2563eb'],
@@ -178,7 +180,11 @@
 			}
 			map = m;
 		});
-		m.on('click', (e) => setDestination(e.lngLat));
+		m.on('click', (e) => {
+			// Clicks on car markers select the car (see marker()) and must not move the destination
+			if ((e.originalEvent.target as Element).closest('.mapboxgl-marker')) return;
+			setDestination(e.lngLat);
+		});
 
 		const search = new MapboxSearchBox();
 		search.accessToken = accessToken;
@@ -225,12 +231,52 @@
 		}
 	});
 
-	// Tilt the map and show 3D buildings and terrain in 3D mode
+	// 3D mode: tilt the map and show 3D buildings, zooming in on the car if the map is too far out for them
 	$effect(() => {
 		if (!map) return;
 		map.setConfigProperty('basemap', 'show3dObjects', is3D);
-		map.easeTo({ pitch: is3D ? 60 : 0, duration: 800 });
+		if (button3D) {
+			button3D.setAttribute('aria-pressed', String(is3D));
+			button3D.style.background = is3D ? '#fde047' : '';
+		}
+		if (is3D) {
+			const closeUp = map.getZoom() < 15;
+			map.easeTo({
+				pitch: 60,
+				bearing: -20,
+				...(closeUp ? { zoom: 16, center: toLngLat(untrack(() => selectedCar)) } : {}),
+				duration: 1200
+			});
+		} else {
+			map.easeTo({ pitch: 0, bearing: 0, duration: 800 });
+		}
 	});
+
+	/** Small "3D" button in the map's control stack that toggles 3D mode. */
+	class ThreeDControl implements mapboxgl.IControl {
+		private container!: HTMLDivElement;
+
+		onAdd() {
+			this.container = document.createElement('div');
+			this.container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
+			const button = document.createElement('button');
+			button.type = 'button';
+			button.textContent = '3D';
+			button.title = '3D-Ansicht';
+			button.setAttribute('aria-label', '3D-Ansicht');
+			button.setAttribute('aria-pressed', 'false');
+			button.style.cssText = 'font: 700 12px/29px sans-serif; color: #333;';
+			button.addEventListener('click', () => (is3D = !is3D));
+			this.container.append(button);
+			button3D = button;
+			return this.container;
+		}
+
+		onRemove() {
+			this.container.remove();
+			button3D = null;
+		}
+	}
 
 	/**
 	 * Renders a Mapbox marker from the element's own markup. The click is handled
@@ -319,10 +365,12 @@
 			access_token: accessToken
 		}).toString();
 
+		const request = ++routeRequest;
 		try {
 			const response = await fetch(url);
 			const data: { code: string; message?: string; routes: { legs: DirectionsLeg[] }[] } =
 				await response.json();
+			if (request !== routeRequest) return; // a newer request has been made meanwhile
 			const route = data.routes?.[0];
 			if (data.code !== 'Ok' || route?.legs.length !== 2) {
 				throw new Error(data.message ?? 'Invalid route response');
@@ -499,12 +547,6 @@
 
 						<div class="text-sm font-medium text-white/90">Ziel eingeben:</div>
 						<div bind:this={searchContainer} class="rounded-lg shadow-xl"></div>
-					</div>
-
-					<div class="flex justify-end items-center gap-2 mt-2">
-						<Badge color="dark" class="text-sm text-white/90">2D</Badge>
-						<Toggle bind:checked={is3D} />
-						<Badge color="dark" class="text-sm text-white/90 -ml-3">3D</Badge>
 					</div>
 				</AccordionItem>
 			</Accordion>
